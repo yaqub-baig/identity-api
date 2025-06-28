@@ -1,0 +1,20 @@
+package com.platform.auth.reqest;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+public class UserRegisterRequest {
+	private String firstName;
+	private String lastName;
+	private String emailId;
+	private String mobileNumber;
+	private String password;
+}

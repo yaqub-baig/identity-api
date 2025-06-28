@@ -1,5 +1,6 @@
 package com.platform.auth.controller;
 
+import com.platform.auth.reqest.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -8,11 +9,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.platform.auth.reqest.CustomerRegisterRequest;
-import com.platform.auth.reqest.GarageRegisterRequest;
-import com.platform.auth.reqest.SendVerifyEmailRequest;
-import com.platform.auth.reqest.SignInRequest;
-import com.platform.auth.reqest.UpdatePasswordRequest;
 import com.platform.auth.response.GenericResponse;
 import com.platform.auth.service.PlatformAuthenticationService;
 
@@ -159,6 +155,26 @@ public class PlatformAuthenticationController {
 			log.error("ERROR while register customer -> "+e.getMessage());
 		}
 		return GenericResponse.builder().status("failed").code("500").message("Unable to register").build();
+	}
+
+	@PostMapping("userSignUp")
+	public GenericResponse registerUser(@RequestBody UserRegisterRequest request) {
+		try {
+			return platformAuthenticationService.registerUserDetails(request);
+		} catch (Exception e) {
+			log.error("ERROR while register user -> "+e.getMessage());
+			return GenericResponse.builder().status("failed").code("500").message(e.getMessage()).build();
+		}
+	}
+
+	@PostMapping("verifyOtp")
+	public GenericResponse verifyOtp(@RequestBody VerifyOtpRequest request) {
+		try {
+			return platformAuthenticationService.verifyOtp(request);
+		} catch (Exception e) {
+			log.error("ERROR while verify otp -> "+e.getMessage());
+			return GenericResponse.builder().status("failed").code("500").message(e.getMessage()).build();
+		}
 	}
 	
 	

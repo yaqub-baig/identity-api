@@ -1,14 +1,9 @@
 package com.platform.auth.transformers;
 
+import com.platform.auth.entity.*;
+import com.platform.auth.reqest.UserRegisterRequest;
 import org.springframework.stereotype.Component;
 
-import com.platform.auth.entity.AccountVerificationTracker;
-import com.platform.auth.entity.AuthenticationDetails;
-import com.platform.auth.entity.Customer;
-import com.platform.auth.entity.CustomerAddress;
-import com.platform.auth.entity.Garage;
-import com.platform.auth.entity.GarageAddress;
-import com.platform.auth.entity.GaragePendingActions;
 import com.platform.auth.reqest.CustomerRegisterRequest;
 import com.platform.auth.reqest.GarageRegisterRequest;
 import com.platform.auth.util.Constants;
@@ -124,5 +119,14 @@ public class PlatformObjectTransformer {
 				.insertTms(DateHelper.dbTimeStampp())
 				.build();
 	}
-	
+
+    public User tranformUserRequestToUser(UserRegisterRequest request) {
+		return User.builder ( )
+				.firstName ( request.getFirstName ( ) )
+				.lastName ( request.getLastName ( ) )
+				.email( request.getEmailId ( ) )
+				.mobileNumber ( request.getMobileNumber ( ) )
+				.isVerified ( false )
+				.build ( );
+    }
 }

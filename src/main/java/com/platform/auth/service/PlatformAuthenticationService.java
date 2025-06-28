@@ -4,11 +4,7 @@ import com.platform.auth.entity.Customer;
 import com.platform.auth.exception.InvalidLoginException;
 import com.platform.auth.exception.MemberAlreadyExistException;
 import com.platform.auth.exception.MemberNotExistException;
-import com.platform.auth.reqest.CustomerRegisterRequest;
-import com.platform.auth.reqest.GarageRegisterRequest;
-import com.platform.auth.reqest.SendVerifyEmailRequest;
-import com.platform.auth.reqest.SignInRequest;
-import com.platform.auth.reqest.UpdatePasswordRequest;
+import com.platform.auth.reqest.*;
 import com.platform.auth.response.GenericResponse;
 
 public interface PlatformAuthenticationService {
@@ -30,4 +26,8 @@ public interface PlatformAuthenticationService {
 	public GenericResponse genericSignIn(SignInRequest request) throws MemberNotExistException, InvalidLoginException;
 
 	public GenericResponse updateMemberPassword(UpdatePasswordRequest request) throws MemberNotExistException;
+
+    GenericResponse registerUserDetails(UserRegisterRequest request);
+
+	GenericResponse verifyOtp(VerifyOtpRequest request);
 }

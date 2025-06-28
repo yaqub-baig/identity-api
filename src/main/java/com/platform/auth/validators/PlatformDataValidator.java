@@ -1,5 +1,7 @@
 package com.platform.auth.validators;
 
+import com.platform.auth.dao.UserRepository;
+import com.platform.auth.exception.MemberAlreadyPresentException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +15,9 @@ public class PlatformDataValidator {
 	
 	@Autowired
 	private AuthenticationDetailsRepository authenticationDetailsRepository;
+
+	@Autowired
+	private UserRepository userRepository;
 	
 	public void validateUsername(String username) throws MemberAlreadyExistException {
 		AuthenticationDetails authData = authenticationDetailsRepository.findByUserName(username);
@@ -33,6 +38,13 @@ public class PlatformDataValidator {
 		if(null == authData) {
 			throw new MemberNotExistException("Authentication details not exist");
 		}
+	}
+
+	public void checkUserAlreadyExists(String mobileNumber){
+		 if(userRepository.existsByMobileNumber ( mobileNumber )){
+			 throw new MemberAlreadyPresentException ( "user already exists" );
+		 }
+
 	}
 
 }

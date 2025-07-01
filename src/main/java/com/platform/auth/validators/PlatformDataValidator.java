@@ -1,6 +1,7 @@
 package com.platform.auth.validators;
 
 import com.platform.auth.dao.UserRepository;
+import com.platform.auth.entity.User;
 import com.platform.auth.exception.MemberAlreadyPresentException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -9,6 +10,8 @@ import com.platform.auth.dao.AuthenticationDetailsRepository;
 import com.platform.auth.entity.AuthenticationDetails;
 import com.platform.auth.exception.MemberAlreadyExistException;
 import com.platform.auth.exception.MemberNotExistException;
+
+import java.util.Optional;
 
 @Component
 public class PlatformDataValidator {
@@ -40,11 +43,11 @@ public class PlatformDataValidator {
 		}
 	}
 
-	public void checkUserAlreadyExists(String mobileNumber){
-		 if(userRepository.existsByMobileNumber ( mobileNumber )){
-			 throw new MemberAlreadyPresentException ( "user already exists" );
-		 }
+	public boolean checkUserAlreadyExists(String mobileNumber){
+		 return userRepository.existsByMobileNumber ( mobileNumber );
+		}
 
+	public boolean checkUserIsVerified(String mobileNumber) {
+		return userRepository.existsByMobileNumberAndIsVerified (  mobileNumber );
 	}
-
 }

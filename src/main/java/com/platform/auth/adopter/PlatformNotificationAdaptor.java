@@ -52,6 +52,7 @@ public class PlatformNotificationAdaptor {
 		RestTemplate restTemplate = new RestTemplate ( );
 		String otp = generateSecureOtp ( );
 		log.info ( "OTP generated: " + otp );
+//		otpStorage.remove ( mobileNumber );
 		otpStorage.put ( mobileNumber, Map.entry ( otp, LocalDateTime.now ( ).plusMinutes(5) ) );
 		log.info("expiry time is "+otpStorage.get ( mobileNumber ));
 		otp=String.format("Your OTP is: %s. Do not share this with anyone.", otp);

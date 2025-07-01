@@ -30,4 +30,8 @@ public interface PlatformAuthenticationService {
     GenericResponse registerUserDetails(UserRegisterRequest request);
 
 	GenericResponse verifyOtp(VerifyOtpRequest request);
+
+	GenericResponse signIn(SignInRequestV2 loginRequest);
+
+	GenericResponse getAccessTokenViaRefreshToken(String refreshToken);
 }

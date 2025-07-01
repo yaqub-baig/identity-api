@@ -5,9 +5,12 @@ import com.platform.auth.dao.*;
 import com.platform.auth.entity.*;
 import com.platform.auth.exception.*;
 import com.platform.auth.reqest.*;
+import com.platform.auth.response.AuthResponse;
 import com.platform.auth.response.GarageLoginResponse;
 import com.platform.auth.response.GenericResponse;
+import com.platform.auth.security.JwtUtil;
 import com.platform.auth.service.PlatformAuthenticationService;
+import com.platform.auth.service.RefreshTokenService;
 import com.platform.auth.transformers.PlatformObjectTransformer;
 import com.platform.auth.util.AESUtil;
 import com.platform.auth.util.Constants;
@@ -17,6 +20,14 @@ import com.platform.auth.validators.PlatformDataValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
@@ -56,6 +67,8 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
     @Autowired
     private AccountVerificationTrackerRepository accountVerificationTrackerRepository;
 
+    @Autowired
+    private AuthenticationManager authenticationManager;
 
     @Autowired
     private GarageRepository garageRepository;
@@ -75,6 +88,12 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
     private UserRepository userRepository;
     @Autowired
     private RoleRepository roleRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private JwtUtil jwtUtil;
+    @Autowired
+    private RefreshTokenService refreshTokenService;
 
 
     @Override
@@ -355,18 +374,21 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
     @Override
     public GenericResponse registerUserDetails(UserRegisterRequest request) {
         try {
-            platformDataValidator.checkUserAlreadyExists ( request.getMobileNumber ( ) );
-
+            boolean userExists = platformDataValidator.checkUserAlreadyExists ( request.getMobileNumber ( ) );
+            if(userExists){
+                if ( ! platformDataValidator.checkUserIsVerified ( request.getMobileNumber ( ) ) ) {
+                    platformNotificationAdaptor.callSMSServiceToSendOtp ( request.getMobileNumber ( ) );
+                    return new GenericResponse ( "success", "200", "Otp sent successfully", null );
+                }
+                throw new MemberAlreadyPresentException ( "user already exists" );
+            }
             User user = platformObjectTransformer.tranformUserRequestToUser ( request );
-
-            user.setPassword ( AESUtil.encrypt ( request.getPassword ( ), encryptSecret ) );
-
+            user.setPassword ( passwordEncoder.encode ( request.getPassword ( )) );
             Set<Role> roles = new HashSet<> ();
             Role userRole = roleRepository.findByName( ERole.CUSTOMER)
                     .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
             roles.add(userRole);
             user.setRoles ( roles );
-
             user = userRepository.save ( user );
             return platformNotificationAdaptor.callSMSServiceToSendOtp ( user.getMobileNumber ( ) );
         }
@@ -394,6 +416,60 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
         }
     }
 
+
+    @Override
+    public GenericResponse signIn(SignInRequestV2 loginRequest) {
+        try {
+            User user = userRepository.findByMobileNumberAndIsVerified ( loginRequest.getMobileNumber ( ) ).orElseThrow ( () ->
+                    new UsernameNotFoundException ( "either User not found with phone number: " + loginRequest.getMobileNumber ( ) + " or user is not verified" ) );
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getMobileNumber (), loginRequest.getPassword())
+            );
+            // 2. Set authentication in security context
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            // 3. Generate JWT token
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String token = jwtUtil.generateAccessToken(userDetails);
+            String refreshToken = refreshTokenService.generateRefreshToken(user);
+            // 4. Prepare success response
+            return GenericResponse.builder()
+                    .status("success")
+                    .code("200")
+                    .message("Login successful")
+                    .body( AuthResponse.builder()
+                            .accessToken(token)
+                            .refreshToken(refreshToken)
+                            .build())
+                    .build();
+        } catch ( BadCredentialsException e) {
+            // Handle invalid credentials
+            return GenericResponse.builder()
+                    .status("error")
+                    .code("401")
+                    .message("Invalid phone number or password")
+                    .build();
+        } catch (Exception e) {
+            // Handle other exceptions
+            log.error("Login error: {}", e.getMessage());
+            return GenericResponse.builder()
+                    .status("error")
+                    .code("500")
+                    .message("An error occurred during login")
+                    .build();
+        }
+    }
+
+    @Override
+    public GenericResponse getAccessTokenViaRefreshToken(String refreshToken) {
+        RefreshToken refreshToken1 = refreshTokenService.validateRefreshToken ( refreshToken );
+        String accessToken = jwtUtil.generateAccessToken ( (UserDetails) refreshToken1.getUser ( ) );
+        return GenericResponse.builder()
+                .status("success")
+                .code("200")
+                .message("Access token generated successfully")
+                .body ( new AuthResponse ( accessToken, refreshToken ) )
+                .build();
+    }
 
 
 }

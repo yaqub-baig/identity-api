@@ -42,7 +42,7 @@ public class User {
 	@Column(name = "is_verified")
 	private Boolean isVerified;
 
-	@ManyToMany(fetch = FetchType.LAZY) // or LAZY if you prefer
+	@ManyToMany(fetch = FetchType.EAGER) // or LAZY if you prefer
 	@JoinTable(
 			name = "user_roles",
 			joinColumns = @JoinColumn(name = "user_id"),

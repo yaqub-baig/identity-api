@@ -9,6 +9,7 @@ import com.platform.auth.response.AuthResponse;
 import com.platform.auth.response.GarageLoginResponse;
 import com.platform.auth.response.GenericResponse;
 import com.platform.auth.security.JwtUtil;
+import com.platform.auth.security.UserSecurityDetails;
 import com.platform.auth.service.PlatformAuthenticationService;
 import com.platform.auth.service.RefreshTokenService;
 import com.platform.auth.transformers.PlatformObjectTransformer;
@@ -374,7 +375,9 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
     @Override
     public GenericResponse registerUserDetails(UserRegisterRequest request) {
         try {
-            boolean userExists = platformDataValidator.checkUserAlreadyExists ( request.getMobileNumber ( ) );
+            String mobileNumber = "+971" + request.getMobileNumber ( );
+            request.setMobileNumber ( mobileNumber );
+            boolean userExists = platformDataValidator.checkUserAlreadyExists ( mobileNumber );
             if(userExists){
                 if ( ! platformDataValidator.checkUserIsVerified ( request.getMobileNumber ( ) ) ) {
                     platformNotificationAdaptor.callSMSServiceToSendOtp ( request.getMobileNumber ( ) );
@@ -402,6 +405,8 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
 
     @Override
     public GenericResponse verifyOtp(VerifyOtpRequest request) {
+        request.setMobileNumber ("+971"+ request.getMobileNumber () );
+
         boolean isVerified = platformNotificationAdaptor.verifyOtp ( request );
         if ( isVerified ) {
             userRepository.findByMobileNumber ( request.getMobileNumber ( ) )
@@ -412,7 +417,7 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
             ;
             return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "otp verified" ).build ( );
         } else {
-            return GenericResponse.builder ( ).status ( "failed" ).code ( "200" ).message ( "otp not verified" ).build ( );
+            return GenericResponse.builder ( ).status ( "failed" ).code ( "500" ).message ( "invalid otp" ).build ( );
         }
     }
 
@@ -420,6 +425,7 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
     @Override
     public GenericResponse signIn(SignInRequestV2 loginRequest) {
         try {
+            loginRequest.setMobileNumber ( "+971" + loginRequest.getMobileNumber ( ) );
             User user = userRepository.findByMobileNumberAndIsVerified ( loginRequest.getMobileNumber ( ) ).orElseThrow ( () ->
                     new UsernameNotFoundException ( "either User not found with phone number: " + loginRequest.getMobileNumber ( ) + " or user is not verified" ) );
             Authentication authentication = authenticationManager.authenticate(
@@ -462,13 +468,19 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
     @Override
     public GenericResponse getAccessTokenViaRefreshToken(String refreshToken) {
         RefreshToken refreshToken1 = refreshTokenService.validateRefreshToken ( refreshToken );
-        String accessToken = jwtUtil.generateAccessToken ( (UserDetails) refreshToken1.getUser ( ) );
+        String accessToken = jwtUtil.generateAccessToken ( new UserSecurityDetails (  refreshToken1.getUser ( ) ));
         return GenericResponse.builder()
                 .status("success")
                 .code("200")
                 .message("Access token generated successfully")
                 .body ( new AuthResponse ( accessToken, refreshToken ) )
                 .build();
+    }
+
+    @Override
+    public GenericResponse resendOtp(String request) {
+
+        return platformNotificationAdaptor.callSMSServiceToSendOtp ( request );
     }
 
 

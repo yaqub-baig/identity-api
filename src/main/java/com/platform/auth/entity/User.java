@@ -12,12 +12,15 @@ import lombok.Setter;
 import java.util.Set;
 
 @Entity
-@Table(name = "users")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@Table(name = "users", indexes = {
+		@Index(name = "idx_email", columnList = "email", unique = true),
+		@Index(name = "idx_phone", columnList = "mobile_number", unique = true)
+})
 public class User {
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
@@ -30,7 +33,7 @@ public class User {
 	@Column(name = "last_name")
 	private String lastName;
 	
-	@Column(name = "email")
+	@Column(name = "email",unique = true)
 	private String email;
 	
 	@Column(name = "password")

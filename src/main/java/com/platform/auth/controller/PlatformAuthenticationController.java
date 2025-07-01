@@ -170,6 +170,7 @@ public class PlatformAuthenticationController {
     @PostMapping("/user/verify-otp")
     public GenericResponse verifyOtp(@RequestBody VerifyOtpRequest request) {
         try {
+            log.info ( "request -> " + request.getOtp ()+"   "+request.getMobileNumber () );
             return platformAuthenticationService.verifyOtp ( request );
         }
         catch ( Exception e ) {
@@ -180,13 +181,20 @@ public class PlatformAuthenticationController {
 
     @PostMapping("/user/signin")
     public GenericResponse authenticateUser(@RequestBody SignInRequestV2 loginRequest) {
-       return platformAuthenticationService.signIn ( loginRequest );
+        return platformAuthenticationService.signIn ( loginRequest );
     }
+
     @PostMapping("/user/refresh-token")
-    public GenericResponse getAccessTokenViaRefreshToken(String refreshToken) {
-return platformAuthenticationService.getAccessTokenViaRefreshToken(refreshToken);
+    public GenericResponse getAccessTokenViaRefreshToken(@RequestParam(value = "refreshToken") String refreshToken) {
+        return platformAuthenticationService.getAccessTokenViaRefreshToken ( refreshToken );
     }
-	
+
+    @PostMapping("/user/resend-otp")
+    public GenericResponse resendOtp(@RequestParam("mobileNumber") String request) {
+        return platformAuthenticationService.resendOtp ("+971"+ request );
+    }
+
+
 	/*
 	@Operation(summary = "Encrypting the string and resulting encryted string")
 	@ApiResponses(value = { 

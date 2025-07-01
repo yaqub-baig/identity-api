@@ -40,11 +40,9 @@ public class SecurityConfig {
 
                 // For Spring Boot 2.7.14 (Spring Security 5.7.x)
                 .authorizeRequests ( auth -> auth
-                        .antMatchers ( HttpMethod.POST,
-                                "/auth/user/signup",
-                                "/auth/user/signin",
-                                "/auth/user/verify-otp" )
+                        .antMatchers ( HttpMethod.POST,"/auth/user/**")
                         .permitAll ( )
+                        .antMatchers ( "swagger-ui.html" ).permitAll ()
                         .anyRequest ( )
                         .authenticated ( )
                 )

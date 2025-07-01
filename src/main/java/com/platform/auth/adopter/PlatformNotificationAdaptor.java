@@ -1,5 +1,6 @@
 package com.platform.auth.adopter;
 
+import com.platform.auth.exception.OtpExpiredException;
 import com.platform.auth.exception.OtpNotSentException;
 import com.platform.auth.reqest.VerifyOtpRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -51,8 +52,12 @@ public class PlatformNotificationAdaptor {
 	public GenericResponse callSMSServiceToSendOtp(String mobileNumber) {
 		RestTemplate restTemplate = new RestTemplate ( );
 		String otp = generateSecureOtp ( );
+		log.info ( "Mobile number: " + mobileNumber );
 		log.info ( "OTP generated: " + otp );
-//		otpStorage.remove ( mobileNumber );
+		log.info("otp storage is ---------> "+otpStorage.get ( mobileNumber ));
+		log.info("otp storage is ---------> "+otpStorage.get ( mobileNumber ));
+		otpStorage.remove ( mobileNumber );
+		log.info("otp storage is ---------> "+otpStorage.get ( mobileNumber ));
 		otpStorage.put ( mobileNumber, Map.entry ( otp, LocalDateTime.now ( ).plusMinutes(5) ) );
 		log.info("expiry time is "+otpStorage.get ( mobileNumber ));
 		otp=String.format("Your OTP is: %s. Do not share this with anyone.", otp);
@@ -98,15 +103,20 @@ public class PlatformNotificationAdaptor {
 	public boolean verifyOtp(VerifyOtpRequest request) {
 		String mobileNumber = request.getMobileNumber ( );
 		String otp = request.getOtp ( );
+		log.info ( "request ---------> " + request.getOtp ()+"   "+request.getMobileNumber () );
 		Map.Entry<String, LocalDateTime> entry = otpStorage.get ( mobileNumber );
 		if (entry == null) {
 			return false;
 		}
 		String storedOtp = entry.getKey ( );
+		log.info ( "stored otp --------> " + storedOtp );
 		LocalDateTime expiryTime = entry.getValue ( );
-		if (otp.equals ( storedOtp ) && LocalDateTime.now ( ).isBefore ( expiryTime )) {
-			otpStorage.remove ( mobileNumber );
-			return true;
+        if ( otp.equals ( storedOtp ) ) {
+			if ( LocalDateTime.now ( ).isBefore ( expiryTime ) ) {
+				otpStorage.remove ( mobileNumber );
+				return true;
+			}
+			else {throw new OtpExpiredException ( "OTP has expired" );}
 		}
 		return false;
 	}

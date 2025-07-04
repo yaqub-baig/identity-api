@@ -18,11 +18,11 @@ import com.platform.auth.util.Constants;
 import com.platform.auth.util.DateHelper;
 import com.platform.auth.util.ERole;
 import com.platform.auth.validators.PlatformDataValidator;
+import io.jsonwebtoken.JwtException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -303,7 +303,7 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
             }
 
             if ( authDetails.getMemberType ( ).equals ( Constants.GARAGE_TECH ) ) {
-                log.info ( "Login successfull" );
+                log.info ( "Login successfully" );
                 if ( isEmailVerificationCompleted ( authDetails ) ) {
                     GarageTechnicians technicianDetails = garageTechnicianRepository.findById ( authDetails.getMemberId ( ) ).get ( );
                     return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "login successfull" ).body ( technicianDetails ).build ( );
@@ -312,7 +312,7 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
             }
 
             if ( authDetails.getMemberType ( ).equals ( Constants.GARAGE ) ) {
-                log.info ( "Login successfull" );
+                log.info ( "Login successfully" );
                 if ( isEmailVerificationCompleted ( authDetails ) ) {
                     Garage garageDetails = garageRepository.findById ( authDetails.getMemberId ( ) ).get ( );
                     GarageAddress address = garageAddressRepository.findByGarageId ( garageDetails.getId ( ) );
@@ -374,38 +374,30 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
 
     @Override
     public GenericResponse registerUserDetails(UserRegisterRequest request) {
-        try {
-            String mobileNumber = "+971" + request.getMobileNumber ( );
-            request.setMobileNumber ( mobileNumber );
-            boolean userExists = platformDataValidator.checkUserAlreadyExists ( mobileNumber );
-            if(userExists){
-                if ( ! platformDataValidator.checkUserIsVerified ( request.getMobileNumber ( ) ) ) {
-                    platformNotificationAdaptor.callSMSServiceToSendOtp ( request.getMobileNumber ( ) );
-                    return new GenericResponse ( "success", "200", "Otp sent successfully", null );
-                }
-                throw new MemberAlreadyPresentException ( "user already exists" );
+        String mobileNumber = "+971" + request.getMobileNumber ( );
+        request.setMobileNumber ( mobileNumber );
+        boolean userExists = platformDataValidator.checkUserAlreadyExists ( mobileNumber, request.getEmailId ( ) );
+        if ( userExists ) {
+            if ( ! platformDataValidator.checkUserIsVerified ( request.getMobileNumber ( ) ) ) {
+                platformNotificationAdaptor.callSMSServiceToSendOtp ( request.getMobileNumber ( ) );
+                return new GenericResponse ( "success", "200", "Otp sent successfully", null );
             }
-            User user = platformObjectTransformer.tranformUserRequestToUser ( request );
-            user.setPassword ( passwordEncoder.encode ( request.getPassword ( )) );
-            Set<Role> roles = new HashSet<> ();
-            Role userRole = roleRepository.findByName( ERole.CUSTOMER)
-                    .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-            roles.add(userRole);
-            user.setRoles ( roles );
-            user = userRepository.save ( user );
-            return platformNotificationAdaptor.callSMSServiceToSendOtp ( user.getMobileNumber ( ) );
+            throw new MemberAlreadyPresentException ( "user already exists" );
         }
-        catch ( MemberAlreadyPresentException e ) {
-            throw new MemberAlreadyPresentException ( "user already exists", e );
-        }
-        catch ( OtpNotSentException e ) {
-            throw new OtpNotSentException ( "otp not sent" );
-        }
+        User user = platformObjectTransformer.tranformUserRequestToUser ( request );
+        user.setPassword ( passwordEncoder.encode ( request.getPassword ( ) ) );
+        Set<Role> roles = new HashSet<> ( );
+        Role userRole = roleRepository.findByName ( ERole.CUSTOMER )
+                .orElseThrow ( () -> new RuntimeException ( "Error: Role is not found." ) );
+        roles.add ( userRole );
+        user.setRoles ( roles );
+        user = userRepository.save ( user );
+        return platformNotificationAdaptor.callSMSServiceToSendOtp ( user.getMobileNumber ( ) );
     }
 
     @Override
     public GenericResponse verifyOtp(VerifyOtpRequest request) {
-        request.setMobileNumber ("+971"+ request.getMobileNumber () );
+        request.setMobileNumber ( "+971" + request.getMobileNumber ( ) );
 
         boolean isVerified = platformNotificationAdaptor.verifyOtp ( request );
         if ( isVerified ) {
@@ -413,7 +405,7 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
                     .ifPresent ( user -> {
                         user.setIsVerified ( true );
                         userRepository.save ( user );
-                        } )
+                    } )
             ;
             return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "otp verified" ).build ( );
         } else {
@@ -424,63 +416,105 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
 
     @Override
     public GenericResponse signIn(SignInRequestV2 loginRequest) {
-        try {
+        log.info ( "request -1> " + loginRequest.getMobileNumber ( ) + "   " + loginRequest.getPassword ( ) );
+        log.info ( "request -2> " + loginRequest.getEmail ( ) + "   " + loginRequest.getPassword ( ) );
+        User user = null;
+        if ( loginRequest.getMobileNumber ( ) != null && ! loginRequest.getMobileNumber ( ).isEmpty ( ) ) {
             loginRequest.setMobileNumber ( "+971" + loginRequest.getMobileNumber ( ) );
-            User user = userRepository.findByMobileNumberAndIsVerified ( loginRequest.getMobileNumber ( ) ).orElseThrow ( () ->
-                    new UsernameNotFoundException ( "either User not found with phone number: " + loginRequest.getMobileNumber ( ) + " or user is not verified" ) );
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getMobileNumber (), loginRequest.getPassword())
-            );
-            // 2. Set authentication in security context
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            // 3. Generate JWT token
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            String token = jwtUtil.generateAccessToken(userDetails);
-            String refreshToken = refreshTokenService.generateRefreshToken(user);
-            // 4. Prepare success response
-            return GenericResponse.builder()
-                    .status("success")
-                    .code("200")
-                    .message("Login successful")
-                    .body( AuthResponse.builder()
-                            .accessToken(token)
-                            .refreshToken(refreshToken)
-                            .build())
-                    .build();
-        } catch ( BadCredentialsException e) {
-            // Handle invalid credentials
-            return GenericResponse.builder()
-                    .status("error")
-                    .code("401")
-                    .message("Invalid phone number or password")
-                    .build();
-        } catch (Exception e) {
-            // Handle other exceptions
-            log.error("Login error: {}", e.getMessage());
-            return GenericResponse.builder()
-                    .status("error")
-                    .code("500")
-                    .message("An error occurred during login")
-                    .build();
+            user = userRepository.findByMobileNumberAndIsVerified ( loginRequest.getMobileNumber ( ) ).orElseThrow ( () ->
+                    new UsernameNotFoundException ( " User not found with phone number: " + loginRequest.getMobileNumber ( ) ) );
+        } else if ( loginRequest.getEmail ( ) != null && ! loginRequest.getEmail ( ).isEmpty ( ) ) {
+            user = userRepository.findByEmailAndIsVerified ( loginRequest.getEmail ( ) ).orElseThrow ( () ->
+                    new UsernameNotFoundException ( "user not found with email: " + loginRequest.getEmail ( ) ) );
         }
+        Authentication authentication = authenticationManager.authenticate (
+                new UsernamePasswordAuthenticationToken ( user.getMobileNumber ( ), loginRequest.getPassword ( ) )
+        );
+        // 2. Set authentication in security context
+        SecurityContextHolder.getContext ( ).setAuthentication ( authentication );
+        // 3. Generate JWT token
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal ( );
+        String token = jwtUtil.generateAccessToken ( userDetails );
+        String refreshToken = refreshTokenService.generateRefreshToken ( user );
+        // 4. Prepare success response
+        return GenericResponse.builder ( )
+                .status ( "success" )
+                .code ( "200" )
+                .message ( "Login successful" )
+                .body ( AuthResponse.builder ( )
+                        .accessToken ( token )
+                        .refreshToken ( refreshToken )
+                        .build ( ) )
+                .build ( );
     }
 
     @Override
     public GenericResponse getAccessTokenViaRefreshToken(String refreshToken) {
         RefreshToken refreshToken1 = refreshTokenService.validateRefreshToken ( refreshToken );
-        String accessToken = jwtUtil.generateAccessToken ( new UserSecurityDetails (  refreshToken1.getUser ( ) ));
-        return GenericResponse.builder()
-                .status("success")
-                .code("200")
-                .message("Access token generated successfully")
+        String accessToken = jwtUtil.generateAccessToken ( new UserSecurityDetails ( refreshToken1.getUser ( ) ) );
+        return GenericResponse.builder ( )
+                .status ( "success" )
+                .code ( "200" )
+                .message ( "Access token generated successfully" )
                 .body ( new AuthResponse ( accessToken, refreshToken ) )
-                .build();
+                .build ( );
     }
 
     @Override
     public GenericResponse resendOtp(String request) {
-
         return platformNotificationAdaptor.callSMSServiceToSendOtp ( request );
+    }
+
+    @Override
+    public GenericResponse forgotPassword(String phoneNumber) {
+        User user = platformDataValidator.checkUserExistWithPhoneNumber ( phoneNumber ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with phone Number" ) );
+        GenericResponse genericResponse = platformNotificationAdaptor.callSMSServiceToSendOtp ( user.getMobileNumber ( ) );
+        genericResponse.setMessage ( "Otp sent successfully for reset password" );
+        return genericResponse;
+    }
+
+    @Override
+    public GenericResponse logout() {
+        Integer currentUserId = getCurrentUserId ( );
+        return refreshTokenService.deleteRefreshTokenByUserId ( currentUserId );
+
+    }
+
+
+    @Override
+    public GenericResponse resetPassword(ResetPasswordRequest request) {
+        Integer currentUserId = getCurrentUserId ( );
+        User user = userRepository.findById( currentUserId ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with phoneNumber" ) );
+        user.setPassword ( passwordEncoder.encode ( request.getPassword ( ) ) );
+        userRepository.save ( user );
+        return new GenericResponse ( "success", "200", "Password reset successfully", null );
+    }
+
+    @Override
+    public GenericResponse verifyResetPasswordOtp(VerifyOtpRequest request) {
+        request.setMobileNumber ( "+971" + request.getMobileNumber ( ) );
+        boolean b = platformNotificationAdaptor.verifyOtp ( request );
+        if ( b ) {
+            User user = userRepository.findByMobileNumber ( request.getMobileNumber ( ) ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with mobile number" ) );
+            String tempAccessToken = jwtUtil.generateAccessToken ( new UserSecurityDetails ( user ), 300000 );// 5 minutes
+            return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).body ( tempAccessToken ).message ( "otp verified successfully" ).build ( );
+        } else {
+            return GenericResponse.builder ( ).status ( "failed" ).code ( "500" ).message ( "invalid otp" ).build ( );
+        }
+    }
+
+
+    public Integer getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext ( ).getAuthentication ( );
+        log.info ( "authentication - > " + authentication );
+        if ( authentication == null || ! authentication.isAuthenticated ( ) ) {
+            throw new JwtException ( "User not authenticated" );
+        }
+        log.info ( "authentication - > " + authentication.getName ( ) );
+        String number = authentication.getName ( );
+        return userRepository.findByMobileNumber ( number )
+                .map ( User::getId )
+                .orElseThrow ( () -> new JwtException ( "User not found" ) );
     }
 
 

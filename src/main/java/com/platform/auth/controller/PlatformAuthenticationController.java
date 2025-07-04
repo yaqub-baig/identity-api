@@ -158,25 +158,12 @@ public class PlatformAuthenticationController {
 
     @PostMapping("user/signup")
     public GenericResponse registerUser(@RequestBody UserRegisterRequest request) {
-        try {
             return platformAuthenticationService.registerUserDetails ( request );
-        }
-        catch ( Exception e ) {
-            log.error ( "ERROR while register user -> " + e.getMessage ( ) );
-            return GenericResponse.builder ( ).status ( "failed" ).code ( "500" ).message ( e.getMessage ( ) ).build ( );
-        }
-    }
+         }
 
     @PostMapping("/user/verify-otp")
     public GenericResponse verifyOtp(@RequestBody VerifyOtpRequest request) {
-        try {
-            log.info ( "request -> " + request.getOtp ()+"   "+request.getMobileNumber () );
-            return platformAuthenticationService.verifyOtp ( request );
-        }
-        catch ( Exception e ) {
-            log.error ( "ERROR while verify otp -> " + e.getMessage ( ) );
-            return GenericResponse.builder ( ).status ( "failed" ).code ( "500" ).message ( e.getMessage ( ) ).build ( );
-        }
+        return platformAuthenticationService.verifyOtp ( request );
     }
 
     @PostMapping("/user/signin")
@@ -194,7 +181,25 @@ public class PlatformAuthenticationController {
         return platformAuthenticationService.resendOtp ("+971"+ request );
     }
 
+    @PostMapping("/user/forgot-password")
+    public GenericResponse forgotPassword(@RequestParam("mobileNumber") String request) {
+        return platformAuthenticationService.forgotPassword (  "+971"+ request );
+    }
 
+    @PostMapping("user/verify-reset-password-otp")
+    public GenericResponse verifyResetPasswordOtp(@RequestBody VerifyOtpRequest request) {
+        return platformAuthenticationService.verifyResetPasswordOtp ( request );
+    }
+
+    @PostMapping("reset-password")
+    public GenericResponse resetPassword(@RequestBody ResetPasswordRequest request) {
+        return platformAuthenticationService.resetPassword ( request );
+    }
+
+    @PostMapping("/logout")
+    public GenericResponse logout() {
+        return platformAuthenticationService.logout ( );
+    }
 	/*
 	@Operation(summary = "Encrypting the string and resulting encryted string")
 	@ApiResponses(value = { 

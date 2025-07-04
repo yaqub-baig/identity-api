@@ -5,10 +5,13 @@ import com.platform.auth.entity.RefreshToken;
 import com.platform.auth.entity.User;
 import com.platform.auth.exception.RefreshTokenExpiredException;
 import com.platform.auth.exception.ResourceNotFoundException;
+import com.platform.auth.response.GenericResponse;
 import com.platform.auth.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 
 import java.time.Instant;
 import java.util.UUID;
@@ -41,20 +44,19 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
         return verifyExpiration ( token );
 
     }
+    @Transactional
+    @Override
+    public GenericResponse deleteRefreshTokenByUserId(Integer currentUserId) {
+        refreshTokenRepository.deleteByUserId ( currentUserId );
+        return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "successfully logout" ).build ( );
+    }
 
     public RefreshToken verifyExpiration(RefreshToken token) {
-
-        try {
             if ( token.getExpiryDate ( ).compareTo ( Instant.now ( ) ) < 0 ) {
                 refreshTokenRepository.delete ( token );
                 throw new RefreshTokenExpiredException ( "Refresh token was expired" );
             }
             return token;
-        }
-
-        catch ( RefreshTokenExpiredException e ) {
-            throw new RefreshTokenExpiredException ( "Refresh token was expired" );
-        }
     }
 
 }

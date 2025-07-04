@@ -2,6 +2,9 @@ package com.platform.auth.config;
 
 import java.util.List;
 
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,6 +26,7 @@ public class OpenAPIConfig {
 
 	@Bean
 	public OpenAPI myOpenAPI() {
+		final String securitySchemeName = "bearerAuth";
 		Server devServer = new Server();
 		devServer.setUrl(devUrl);
 		devServer.setDescription("Server URL in Development environment");
@@ -42,6 +46,18 @@ public class OpenAPIConfig {
 				.description("This API exposes endpoints to manage authentication of platform.")
 				.termsOfService("https://www.carservices.com/terms").license(mitLicense);
 
-		return new OpenAPI().info(info).servers(List.of(devServer, prodServer));
+				// Apply security globally to all operations
+
+		Components components = new Components ( )
+				.addSecuritySchemes ( securitySchemeName,
+						new SecurityScheme ( )
+								.type ( SecurityScheme.Type.HTTP )
+								.scheme ( "bearer" )
+								.bearerFormat ( "JWT" )
+								.description ( "Enter JWT token with Bearer prefix, e.g. 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'" )
+				);
+		SecurityRequirement securityItem = new SecurityRequirement ( ).addList ( securitySchemeName );
+		return new OpenAPI().info(info).servers(List.of(devServer, prodServer)).components( components )
+				.addSecurityItem( securityItem );
 	}
 }

@@ -36,4 +36,12 @@ public interface PlatformAuthenticationService {
 	GenericResponse getAccessTokenViaRefreshToken(String refreshToken);
 
 	GenericResponse resendOtp(String request);
+
+	GenericResponse forgotPassword(String request);
+
+	GenericResponse logout();
+
+	GenericResponse resetPassword(ResetPasswordRequest request);
+
+	GenericResponse verifyResetPasswordOtp(VerifyOtpRequest request);
 }

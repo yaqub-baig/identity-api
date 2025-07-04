@@ -56,7 +56,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (Exception e ) {
             // Invalid token - just continue without authentication
             log.error ( "Invalid token: " + e.getMessage ( ) );
-
         }
         filterChain.doFilter(request, response);
     }

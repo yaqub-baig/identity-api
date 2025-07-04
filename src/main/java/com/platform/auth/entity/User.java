@@ -18,7 +18,6 @@ import java.util.Set;
 @NoArgsConstructor
 @Builder
 @Table(name = "users", indexes = {
-		@Index(name = "idx_email", columnList = "email", unique = true),
 		@Index(name = "idx_phone", columnList = "mobile_number", unique = true)
 })
 public class User {
@@ -33,7 +32,7 @@ public class User {
 	@Column(name = "last_name")
 	private String lastName;
 	
-	@Column(name = "email",unique = true)
+	@Column(name = "email")
 	private String email;
 	
 	@Column(name = "password")

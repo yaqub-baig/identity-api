@@ -52,17 +52,16 @@ public class PlatformNotificationAdaptor {
 	public GenericResponse callSMSServiceToSendOtp(String mobileNumber) {
 		RestTemplate restTemplate = new RestTemplate ( );
 		String otp = generateSecureOtp ( );
-		log.info ( "Mobile number: " + mobileNumber );
-		log.info ( "OTP generated: " + otp );
-		log.info("otp storage is ---------> "+otpStorage.get ( mobileNumber ));
-		log.info("otp storage is ---------> "+otpStorage.get ( mobileNumber ));
+		log.info ( "OTP generated:--------1> " + otp );
+		log.info ( "OTP generated:--------1> " + mobileNumber );
+		log.info("otp storage is ---------2> "+otpStorage.get ( mobileNumber ));
 		otpStorage.remove ( mobileNumber );
-		log.info("otp storage is ---------> "+otpStorage.get ( mobileNumber ));
+		log.info("otp storage is ---------3> "+otpStorage.get ( mobileNumber ));
 		otpStorage.put ( mobileNumber, Map.entry ( otp, LocalDateTime.now ( ).plusMinutes(5) ) );
-		log.info("expiry time is "+otpStorage.get ( mobileNumber ));
+		log.info("expiry time is 5"+otpStorage.get ( mobileNumber ));
 		otp=String.format("Your OTP is: %s. Do not share this with anyone.", otp);
 
-		try {
+//		try {
 			HttpHeaders headers = new HttpHeaders ( );
 			headers.setContentType ( MediaType.APPLICATION_FORM_URLENCODED );
 			MultiValueMap<String, String> params = new LinkedMultiValueMap<> ( );
@@ -92,26 +91,22 @@ public class PlatformNotificationAdaptor {
 						response.getBody());
 				throw new OtpNotSentException("Failed to send OTP. Status: " + response.getStatusCodeValue());
 			}
-		}
-		catch ( RestClientException e ) {
-			log.error("Error while calling SMS service", e);
-			throw new OtpNotSentException("Failed to send OTP: " + e.getMessage());
-		}
 
 	}
 
 	public boolean verifyOtp(VerifyOtpRequest request) {
 		String mobileNumber = request.getMobileNumber ( );
 		String otp = request.getOtp ( );
-		log.info ( "request ---------> " + request.getOtp ()+"   "+request.getMobileNumber () );
+		log.info ( "request ---------5> " + request.getOtp ()+"   "+request.getMobileNumber () );
 		Map.Entry<String, LocalDateTime> entry = otpStorage.get ( mobileNumber );
 		if (entry == null) {
 			return false;
 		}
 		String storedOtp = entry.getKey ( );
-		log.info ( "stored otp --------> " + storedOtp );
+		log.info ( "stored otp --------6> " + storedOtp );
 		LocalDateTime expiryTime = entry.getValue ( );
         if ( otp.equals ( storedOtp ) ) {
+			log.info ( "otp matched  --------7>" );
 			if ( LocalDateTime.now ( ).isBefore ( expiryTime ) ) {
 				otpStorage.remove ( mobileNumber );
 				return true;

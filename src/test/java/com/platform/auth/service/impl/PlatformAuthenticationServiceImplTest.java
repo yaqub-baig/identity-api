@@ -860,7 +860,7 @@ class PlatformAuthenticationServiceImplTest {
         request.setOtp(otp);
 
         // Mock behaviors
-//        when(otpService.verifyOtp(mobileNumber, otp)).thenReturn(true);
+
         when(platformNotificationAdaptor.verifyOtp(request)).thenReturn(true);
         when(userRepository.findByMobileNumber(fullMobileNumber)).thenReturn(Optional.of(mockUser));
 
@@ -1189,7 +1189,7 @@ class PlatformAuthenticationServiceImplTest {
         // Verify interactions
         verify(mockSecurityContext).getAuthentication();
         verify(mockAuthentication).isAuthenticated();
-//        verify(mockAuthentication).getName();
+
         verify(userRepository).findByMobileNumber(mobileNumber);
 
         // Clean up
@@ -1222,7 +1222,6 @@ class PlatformAuthenticationServiceImplTest {
         // Verify interactions
         verify(mockSecurityContext).getAuthentication();
         verify(mockAuthentication).isAuthenticated();
-//        verify(mockAuthentication).getName();
         verify(userRepository).findByMobileNumber(emptyMobileNumber);
 
         // Clean up
@@ -1253,7 +1252,7 @@ class PlatformAuthenticationServiceImplTest {
         // Verify interactions
         verify(mockSecurityContext).getAuthentication();
         verify(mockAuthentication).isAuthenticated();
-//        verify(mockAuthentication).getName();
+
         verify(userRepository).findByMobileNumber(null);
 
         // Clean up

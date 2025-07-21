@@ -1289,6 +1289,5 @@ class PlatformAuthenticationServiceImplTest {
     void tearDown() {
         SecurityContextHolder.clearContext();
     }
-
 }
 

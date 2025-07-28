@@ -493,7 +493,7 @@ class PlatformAuthenticationServiceImplTest {
         mockUser.setMobileNumber("+9710000000");
         mockUser.setIsVerified(true);
 
-        UserDetails userDetails = new UserSecurityDetails(mockUser);
+        UserSecurityDetails userDetails = new UserSecurityDetails(mockUser);
         String accessToken = "access-token-123";
         String refreshToken = "refresh-token-456";
 
@@ -544,7 +544,7 @@ class PlatformAuthenticationServiceImplTest {
         mockUser.setMobileNumber("+9710000000");
         mockUser.setIsVerified(true);
 
-        UserDetails userDetails = new UserSecurityDetails(mockUser);
+        UserSecurityDetails userDetails = new UserSecurityDetails(mockUser);
         String accessToken = "access-token-123";
         String refreshToken = "refresh-token-456";
 

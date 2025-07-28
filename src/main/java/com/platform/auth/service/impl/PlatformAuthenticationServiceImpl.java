@@ -433,7 +433,7 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
         // 2. Set authentication in security context
         SecurityContextHolder.getContext ( ).setAuthentication ( authentication );
         // 3. Generate JWT token
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal ( );
+        UserSecurityDetails userDetails = (UserSecurityDetails) authentication.getPrincipal ( );
         String token = jwtUtil.generateAccessToken ( userDetails );
         String refreshToken = refreshTokenService.generateRefreshToken ( user );
         // 4. Prepare success response

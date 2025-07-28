@@ -55,19 +55,20 @@ public class JwtUtil {
         return extractExpiration ( token ).before ( new Date ( ) );
     }
 
-    public String generateAccessToken(UserDetails userDetails) {
+    public String generateAccessToken(UserSecurityDetails userDetails) {
         Map<String, Object> claims = new HashMap<> ( );
         return createToken ( claims, userDetails, accessTokenExpiration );
     }
 
-    public String generateAccessToken(UserDetails userDetails, long accessTokenExpiration) {
+    public String generateAccessToken(UserSecurityDetails userDetails, long accessTokenExpiration) {
         Map<String, Object> claims = new HashMap<> ( );
         return createToken ( claims, userDetails, accessTokenExpiration );
     }
 
 
-    private String createToken(Map<String, Object> claims, UserDetails userDetails, long expiration) {
+    private String createToken(Map<String, Object> claims, UserSecurityDetails userDetails, long expiration) {
         claims.put ( "roles", userDetails.getAuthorities ( ).stream ( ).map ( GrantedAuthority::getAuthority ).collect ( Collectors.toSet ( ) ) );
+        claims.put ( "userId", userDetails.getUserId ( ) );
         return Jwts.builder ( )
                 .setClaims ( claims )
                 .setSubject ( userDetails.getUsername ( ) )

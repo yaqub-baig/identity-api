@@ -31,6 +31,12 @@ public class UserSecurityDetails implements UserDetails {
         return user.getMobileNumber ( );
     }
 
+
+    public String getUserId() {
+        return user.getId ( ).toString ();
+    }
+
+
     @Override
     public boolean isAccountNonExpired() {
         return true;

@@ -1,7 +1,9 @@
 package com.platform.auth.controller;
 
+import com.platform.auth.entity.User;
 import com.platform.auth.reqest.*;
 import com.platform.auth.response.GenericResponse;
+import com.platform.auth.response.UserResponse;
 import com.platform.auth.service.PlatformAuthenticationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -199,6 +201,11 @@ public class PlatformAuthenticationController {
     @PostMapping("/logout")
     public GenericResponse logout() {
         return platformAuthenticationService.logout ( );
+    }
+
+    @GetMapping("/{id}")
+    public UserResponse getUser(@PathVariable Integer id){
+        return platformAuthenticationService.getUser(id);
     }
 	/*
 	@Operation(summary = "Encrypting the string and resulting encryted string")

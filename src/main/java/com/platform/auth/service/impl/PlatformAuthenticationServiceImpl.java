@@ -8,6 +8,7 @@ import com.platform.auth.reqest.*;
 import com.platform.auth.response.AuthResponse;
 import com.platform.auth.response.GarageLoginResponse;
 import com.platform.auth.response.GenericResponse;
+import com.platform.auth.response.UserResponse;
 import com.platform.auth.security.JwtUtil;
 import com.platform.auth.security.UserSecurityDetails;
 import com.platform.auth.service.PlatformAuthenticationService;
@@ -26,7 +27,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -484,7 +484,7 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
     @Override
     public GenericResponse resetPassword(ResetPasswordRequest request) {
         Integer currentUserId = getCurrentUserId ( );
-        User user = userRepository.findById( currentUserId ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with phoneNumber" ) );
+        User user = userRepository.findById ( currentUserId ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with phoneNumber" ) );
         user.setPassword ( passwordEncoder.encode ( request.getPassword ( ) ) );
         userRepository.save ( user );
         return new GenericResponse ( "success", "200", "Password reset successfully", null );
@@ -501,6 +501,20 @@ public class PlatformAuthenticationServiceImpl implements PlatformAuthentication
         } else {
             return GenericResponse.builder ( ).status ( "failed" ).code ( "500" ).message ( "invalid otp" ).build ( );
         }
+    }
+
+    @Override
+    public UserResponse getUser(Integer id) {
+       return userRepository.findById ( id ).map ( user -> {
+            return UserResponse.builder ( )
+                    .id ( user.getId ( ) )
+                    .name ( user.getFirstName ( ).concat ( user.getLastName ( ) ) )
+                    .email ( user.getEmail ( ) )
+                    .mobileNumber ( user.getMobileNumber ( ) )
+                    .isVerified ( user.getIsVerified ( ) )
+                    .build ( );
+        } ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with id: " + id ) );
+
     }
 
 

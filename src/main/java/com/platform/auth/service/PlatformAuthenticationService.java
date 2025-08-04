@@ -6,6 +6,7 @@ import com.platform.auth.exception.MemberAlreadyExistException;
 import com.platform.auth.exception.MemberNotExistException;
 import com.platform.auth.reqest.*;
 import com.platform.auth.response.GenericResponse;
+import com.platform.auth.response.UserResponse;
 
 public interface PlatformAuthenticationService {
 
@@ -44,4 +45,6 @@ public interface PlatformAuthenticationService {
 	GenericResponse resetPassword(ResetPasswordRequest request);
 
 	GenericResponse verifyResetPasswordOtp(VerifyOtpRequest request);
+
+    UserResponse getUser(Integer id);
 }

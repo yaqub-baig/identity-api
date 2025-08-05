@@ -20,18 +20,30 @@ public class CommunicationPreferenceServiceImpl implements CommunicationPreferen
     private final CommunicationPreferenceRepository repository;
     private final IdentityService identityService;
 
-    CommunicationPreference mapToEntity(CommunicationPreference preferenceRequest) {
-        return CommunicationPreference.builder ( )
-                .emailOnServiceUpdates ( preferenceRequest.getEmailOnServiceUpdates ( ) )
-                .smsOnServiceUpdates ( preferenceRequest.getSmsOnServiceUpdates ( ) )
-                .emailOnAppointments ( preferenceRequest.getEmailOnAppointments ( ) )
-                .smsOnAppointments ( preferenceRequest.getSmsOnAppointments ( ) )
-                .emailOnReminders ( preferenceRequest.getEmailOnReminders ( ) )
-                .smsOnReminders ( preferenceRequest.getSmsOnReminders ( ) )
-                .emailOnOffers ( preferenceRequest.getEmailOnOffers ( ) ).smsOnOffers ( preferenceRequest.getSmsOnOffers ( ) )
-                .emailOnQuotationRequests ( preferenceRequest.getEmailOnQuotationRequests ( ) )
-                .smsOnQuotationRequests ( preferenceRequest.getSmsOnQuotationRequests ( ) )
-                .status ( preferenceRequest.getStatus ( ) ).build ( );
+    CommunicationPreference mapToEntity(CommunicationPreferenceRequest preferenceRequest, CommunicationPreference communicationPreference) {
+        if ( preferenceRequest.getEmailOnServiceUpdates ( ) != null )
+            communicationPreference.setEmailOnServiceUpdates ( preferenceRequest.getEmailOnServiceUpdates ( ) );
+        if ( preferenceRequest.getSmsOnServiceUpdates ( ) != null )
+            communicationPreference.setSmsOnServiceUpdates ( preferenceRequest.getSmsOnServiceUpdates ( ) );
+        if ( preferenceRequest.getEmailOnAppointments ( ) != null )
+            communicationPreference.setEmailOnAppointments ( preferenceRequest.getEmailOnAppointments ( ) );
+        if ( preferenceRequest.getSmsOnAppointments ( ) != null )
+            communicationPreference.setSmsOnAppointments ( preferenceRequest.getSmsOnAppointments ( ) );
+        if ( preferenceRequest.getEmailOnReminders ( ) != null )
+            communicationPreference.setEmailOnReminders ( preferenceRequest.getEmailOnReminders ( ) );
+        if ( preferenceRequest.getSmsOnReminders ( ) != null )
+            communicationPreference.setSmsOnReminders ( preferenceRequest.getSmsOnReminders ( ) );
+        if ( preferenceRequest.getEmailOnOffers ( ) != null )
+            communicationPreference.setEmailOnOffers ( preferenceRequest.getEmailOnOffers ( ) );
+        if ( preferenceRequest.getSmsOnOffers ( ) != null )
+            communicationPreference.setSmsOnOffers ( preferenceRequest.getSmsOnOffers ( ) );
+        if ( preferenceRequest.getEmailOnQuotationRequests ( ) != null )
+            communicationPreference.setEmailOnQuotationRequests ( preferenceRequest.getEmailOnQuotationRequests ( ) );
+        if ( preferenceRequest.getSmsOnQuotationRequests ( ) != null )
+            communicationPreference.setSmsOnQuotationRequests ( preferenceRequest.getSmsOnQuotationRequests ( ) );
+        if ( preferenceRequest.getStatus ( ) != null )
+            communicationPreference.setStatus ( preferenceRequest.getStatus ( ) );
+        return communicationPreference;
     }
 
     @Override
@@ -41,7 +53,7 @@ public class CommunicationPreferenceServiceImpl implements CommunicationPreferen
                 .findByUserId ( currentUser.getId ( ) )
                 .orElseGet ( CommunicationPreference::new );
         communicationPreference.setUser ( currentUser );
-        return repository.save ( mapToEntity ( communicationPreference ) );
+        return repository.save ( mapToEntity ( preference, communicationPreference ) );
     }
 
     @Override

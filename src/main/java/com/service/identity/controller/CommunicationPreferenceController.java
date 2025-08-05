@@ -3,7 +3,7 @@ package com.service.identity.controller;
 
 import com.service.identity.entity.CommunicationPreference;
 import com.service.identity.request.CommunicationPreferenceRequest;
-import com.service.identity.service.impl.CommunicationPreferenceService;
+import com.service.identity.service.CommunicationPreferenceService;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

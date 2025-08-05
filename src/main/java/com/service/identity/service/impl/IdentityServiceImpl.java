@@ -225,6 +225,18 @@ public class IdentityServiceImpl implements IdentityService {
                 .map ( User::getId )
                 .orElseThrow ( () -> new JwtException ( "User not found" ) );
     }
+@Override
+public User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext ( ).getAuthentication ( );
+        log.info ( "authentication - > " + authentication );
+        if ( authentication == null || ! authentication.isAuthenticated ( ) ) {
+            throw new JwtException ( "User not authenticated" );
+        }
+        log.info ( "authentication - > " + authentication.getName ( ) );
+        String number = authentication.getName ( );
+        return userRepository.findByMobileNumber ( number )
+                .orElseThrow ( () -> new JwtException ( "User not found" ) );
+    }
 //    @Override
 //    public Customer createCustomerDetails(Customer customer) {
 //        Customer savedCustomer = customerRepository.save ( customer );

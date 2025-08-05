@@ -14,9 +14,6 @@ import javax.persistence.Enumerated;
 @Builder
 public class CommunicationPreferenceRequest {
 
-    private Integer id;
-
-    private Integer customerId; // Reference to the customer (could be VehicleOwner or User)
 
     private Boolean emailOnServiceUpdates;
     private Boolean smsOnServiceUpdates;

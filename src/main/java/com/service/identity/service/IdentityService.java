@@ -1,5 +1,6 @@
 package com.service.identity.service;
 
+import com.service.identity.entity.User;
 import com.service.identity.request.ResetPasswordRequest;
 import com.service.identity.request.SignInRequest;
 import com.service.identity.request.UserRegisterRequest;
@@ -28,6 +29,8 @@ public interface IdentityService {
     GenericResponse verifyResetPasswordOtp(VerifyOtpRequest request);
 
     UserResponse getUser(Integer id);
+
+    User getCurrentUser();
 
 //	public Customer createCustomerDetails(Customer customer);
 

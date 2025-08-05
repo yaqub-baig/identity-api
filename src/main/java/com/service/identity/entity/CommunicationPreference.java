@@ -20,7 +20,8 @@ public class CommunicationPreference {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
 
-	private Integer customerId; // Reference to the customer (could be VehicleOwner or User)
+	@OneToOne
+	private User user; // Reference to the customer (could be VehicleOwner or User)
 
 	private Boolean emailOnServiceUpdates;
 	private Boolean smsOnServiceUpdates;

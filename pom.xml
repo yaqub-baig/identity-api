@@ -8,7 +8,7 @@
 		<version>2.7.14</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.service.identity</groupId>
+	<groupId>com.autoadda.apis.identity</groupId>
 	<artifactId>IdentityApi</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>IdentityApi</name>

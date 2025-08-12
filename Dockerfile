@@ -5,12 +5,12 @@ FROM eclipse-temurin:17-jdk-alpine
 WORKDIR /app
 
 # Copy the Spring Boot executable JAR with correct artifact name
-COPY target/PlatformAuthenticationService-0.0.1-SNAPSHOT.jar app.jar
+COPY target/IdentityApi-0.0.1-SNAPSHOT.jar app.jar
 
 # Expose the default port
-EXPOSE 8091
+EXPOSE 8010
 # Set environment variable inside container
-ENV SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/car_space?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+ENV SPRING_DATASOURCE_URL=jdbc:mysql://host.docker.internal:3306/auto_adda_identity?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
 
 # Run the app
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

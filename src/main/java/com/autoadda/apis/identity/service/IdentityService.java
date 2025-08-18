@@ -22,9 +22,9 @@ public interface IdentityService {
 
     GenericResponse forgotPassword(String request);
 
-    GenericResponse logout();
+    GenericResponse logout(String autoAddaId);
 
-    GenericResponse resetPassword(ResetPasswordRequest request);
+    GenericResponse resetPassword(ResetPasswordRequest request, String autoAddaId);
 
     GenericResponse verifyResetPasswordOtp(VerifyOtpRequest request);
 

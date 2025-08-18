@@ -169,16 +169,16 @@ public class IdentityServiceImpl implements IdentityService {
     }
 
     @Override
-    public GenericResponse logout() {
-        Integer currentUserId = getCurrentUserId ( );
+    public GenericResponse logout(String autoAddaId) {
+        Integer currentUserId = Integer.parseInt ( autoAddaId ) ;
         return refreshTokenService.deleteRefreshTokenByUserId ( currentUserId );
 
     }
 
 
     @Override
-    public GenericResponse resetPassword(ResetPasswordRequest request) {
-        Integer currentUserId = getCurrentUserId ( );
+    public GenericResponse resetPassword(ResetPasswordRequest request, String autoAddaId) {
+        Integer currentUserId = Integer.parseInt ( autoAddaId );
         User user = userRepository.findById ( currentUserId ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with phoneNumber" ) );
         user.setPassword ( passwordEncoder.encode ( request.getPassword ( ) ) );
         userRepository.save ( user );

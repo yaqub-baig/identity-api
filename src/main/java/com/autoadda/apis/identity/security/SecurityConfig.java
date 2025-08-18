@@ -40,8 +40,9 @@ public class SecurityConfig {
 
                 // For Spring Boot 2.7.14 (Spring Security 5.7.x)
                 .authorizeRequests ( auth -> auth
-                        .antMatchers ( HttpMethod.POST,"/auth/user/**")
+                        .antMatchers ( HttpMethod.POST,"/auth/user/**","/auth/logout" ,"/auth/reset-password")
                         .permitAll ( )
+                        .antMatchers ( HttpMethod.GET,"/auth/*" ).permitAll ()
                         .antMatchers (
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
@@ -108,6 +109,7 @@ public class SecurityConfig {
                 "Authorization",
                 "Content-Type",
                 "X-Requested-With",
+                "X-Auto-Adda_Id",
                 "accept",
                 "Origin",
                 "Access-Control-Request-Method",

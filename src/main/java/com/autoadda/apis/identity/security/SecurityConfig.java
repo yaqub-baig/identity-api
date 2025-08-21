@@ -96,11 +96,10 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration ( );
 
         // More secure CORS configuration
-//        config.setAllowedOriginPatterns ( Arrays.asList (
-//                "http://localhost:5174",
-//                "http://localhost:5173"
-//        ) );
-        config.addAllowedOrigin ( "*" );
+        config.setAllowedOriginPatterns ( Arrays.asList (
+                "*"
+        ) );
+
         config.setAllowedMethods ( Arrays.asList (
                 "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
         ) );

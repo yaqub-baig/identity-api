@@ -151,7 +151,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<GenericResponse> handleBadCredentialsException(BadCredentialsException ex) {
         log.warn ( "Invalid input", ex );
-        return buildResponse ( ex, HttpStatus.BAD_REQUEST, ex.getMessage ( ) );
+        return buildResponse ( ex, HttpStatus.BAD_REQUEST, "Invalid Username Or Password" );
     }
 
     @ExceptionHandler(MemberAlreadyPresentException.class)

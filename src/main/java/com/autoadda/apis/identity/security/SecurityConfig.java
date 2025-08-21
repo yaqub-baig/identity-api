@@ -40,16 +40,16 @@ public class SecurityConfig {
 
                 // For Spring Boot 2.7.14 (Spring Security 5.7.x)
                 .authorizeRequests ( auth -> auth
-                        .antMatchers ( HttpMethod.POST,"/auth/user/**","/auth/logout" )
+                        .antMatchers ( HttpMethod.POST, "/auth/user/**", "/auth/logout" )
                         .permitAll ( )
-                        .antMatchers ( HttpMethod.GET,"/auth/*" ).permitAll ()
+                        .antMatchers ( HttpMethod.GET, "/auth/*" ).permitAll ( )
                         .antMatchers (
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/api-docs/**",
                                 "/swagger-resources/**",
-                                "/webjars/**").permitAll ()
+                                "/webjars/**" ).permitAll ( )
                         .anyRequest ( )
                         .authenticated ( )
                 )

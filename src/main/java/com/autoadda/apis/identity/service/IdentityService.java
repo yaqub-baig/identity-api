@@ -24,7 +24,7 @@ public interface IdentityService {
 
     GenericResponse logout(String autoAddaId);
 
-    GenericResponse resetPassword(ResetPasswordRequest request, String autoAddaId);
+    GenericResponse resetPassword(ResetPasswordRequest request);
 
     GenericResponse verifyResetPasswordOtp(VerifyOtpRequest request);
 

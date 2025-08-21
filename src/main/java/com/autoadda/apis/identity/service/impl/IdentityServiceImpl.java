@@ -177,8 +177,9 @@ public class IdentityServiceImpl implements IdentityService {
 
 
     @Override
-    public GenericResponse resetPassword(ResetPasswordRequest request, String autoAddaId) {
-        Integer currentUserId = Integer.parseInt ( autoAddaId );
+    public GenericResponse resetPassword(ResetPasswordRequest request) {
+        log.info(getCurrentUserId ().toString ());
+        Integer currentUserId = getCurrentUserId ();
         User user = userRepository.findById ( currentUserId ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with phoneNumber" ) );
         user.setPassword ( passwordEncoder.encode ( request.getPassword ( ) ) );
         userRepository.save ( user );

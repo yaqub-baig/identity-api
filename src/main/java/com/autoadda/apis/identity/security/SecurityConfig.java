@@ -40,7 +40,7 @@ public class SecurityConfig {
 
                 // For Spring Boot 2.7.14 (Spring Security 5.7.x)
                 .authorizeRequests ( auth -> auth
-                        .antMatchers ( HttpMethod.POST,"/auth/user/**","/auth/logout" ,"/auth/reset-password")
+                        .antMatchers ( HttpMethod.POST,"/auth/user/**","/auth/logout" )
                         .permitAll ( )
                         .antMatchers ( HttpMethod.GET,"/auth/*" ).permitAll ()
                         .antMatchers (

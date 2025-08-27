@@ -196,13 +196,14 @@ public class IdentityController {
     }
 
     @PostMapping("reset-password")
-    public GenericResponse resetPassword(@RequestBody ResetPasswordRequest request) {
+    public GenericResponse resetPassword(
+            @RequestBody ResetPasswordRequest request) {
         return identityService.resetPassword ( request );
     }
 
     @PostMapping("/logout")
-    public GenericResponse logout() {
-        return identityService.logout ( );
+    public GenericResponse logout(@RequestHeader(value = "X-Auto-Adda-Id") String autoAddaId) {
+        return identityService.logout ( autoAddaId );
     }
 
     @GetMapping("/{id}")

@@ -40,15 +40,16 @@ public class SecurityConfig {
 
                 // For Spring Boot 2.7.14 (Spring Security 5.7.x)
                 .authorizeRequests ( auth -> auth
-                        .antMatchers ( HttpMethod.POST,"/auth/user/**")
+                        .antMatchers ( HttpMethod.POST, "/auth/user/**", "/auth/logout" )
                         .permitAll ( )
+                        .antMatchers ( HttpMethod.GET, "/auth/*" ).permitAll ( )
                         .antMatchers (
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/api-docs/**",
                                 "/swagger-resources/**",
-                                "/webjars/**").permitAll ()
+                                "/webjars/**" ).permitAll ( )
                         .anyRequest ( )
                         .authenticated ( )
                 )
@@ -96,8 +97,7 @@ public class SecurityConfig {
 
         // More secure CORS configuration
         config.setAllowedOriginPatterns ( Arrays.asList (
-                "http://localhost:5174",
-                "http://localhost:5173"
+                "*"
         ) );
 
         config.setAllowedMethods ( Arrays.asList (
@@ -108,6 +108,7 @@ public class SecurityConfig {
                 "Authorization",
                 "Content-Type",
                 "X-Requested-With",
+                "X-Auto-Adda_Id",
                 "accept",
                 "Origin",
                 "Access-Control-Request-Method",

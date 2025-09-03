@@ -8,6 +8,7 @@ import com.autoadda.apis.identity.entity.Role;
 import com.autoadda.apis.identity.entity.User;
 import com.autoadda.apis.identity.exception.MemberAlreadyPresentException;
 import com.autoadda.apis.identity.exception.ResourceNotFoundException;
+import com.autoadda.apis.identity.mapper.UserMapper;
 import com.autoadda.apis.identity.request.ResetPasswordRequest;
 import com.autoadda.apis.identity.request.SignInRequest;
 import com.autoadda.apis.identity.request.UserRegisterRequest;
@@ -19,7 +20,6 @@ import com.autoadda.apis.identity.security.JwtUtil;
 import com.autoadda.apis.identity.security.UserSecurityDetails;
 import com.autoadda.apis.identity.service.IdentityService;
 import com.autoadda.apis.identity.service.RefreshTokenService;
-import com.autoadda.apis.identity.mapper.UserMapper;
 import com.autoadda.apis.identity.util.ERole;
 import com.autoadda.apis.identity.validators.DataValidator;
 import io.jsonwebtoken.JwtException;
@@ -170,7 +170,7 @@ public class IdentityServiceImpl implements IdentityService {
 
     @Override
     public GenericResponse logout(String autoAddaId) {
-        Integer currentUserId = Integer.parseInt ( autoAddaId ) ;
+        Integer currentUserId = Integer.parseInt ( autoAddaId );
         return refreshTokenService.deleteRefreshTokenByUserId ( currentUserId );
 
     }
@@ -178,8 +178,8 @@ public class IdentityServiceImpl implements IdentityService {
 
     @Override
     public GenericResponse resetPassword(ResetPasswordRequest request) {
-        log.info(getCurrentUserId ().toString ());
-        Integer currentUserId = getCurrentUserId ();
+        log.info ( getCurrentUserId ( ).toString ( ) );
+        Integer currentUserId = getCurrentUserId ( );
         User user = userRepository.findById ( currentUserId ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with phoneNumber" ) );
         user.setPassword ( passwordEncoder.encode ( request.getPassword ( ) ) );
         userRepository.save ( user );
@@ -204,13 +204,12 @@ public class IdentityServiceImpl implements IdentityService {
         return userRepository.findById ( id ).map ( user -> {
             return UserResponse.builder ( )
                     .id ( user.getId ( ) )
-                    .name ( user.getFirstName ( ).concat ( user.getLastName ( ) ) )
+                    .name ( user.getFirstName ( ).concat ( " " + user.getLastName ( ) ) )
                     .email ( user.getEmail ( ) )
                     .mobileNumber ( user.getMobileNumber ( ) )
                     .isVerified ( user.getIsVerified ( ) )
                     .build ( );
         } ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with id: " + id ) );
-
     }
 
 
@@ -226,8 +225,9 @@ public class IdentityServiceImpl implements IdentityService {
                 .map ( User::getId )
                 .orElseThrow ( () -> new JwtException ( "User not found" ) );
     }
-@Override
-public User getCurrentUser() {
+
+    @Override
+    public User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext ( ).getAuthentication ( );
         log.info ( "authentication - > " + authentication );
         if ( authentication == null || ! authentication.isAuthenticated ( ) ) {

@@ -7,6 +7,7 @@ import com.autoadda.apis.identity.entity.RefreshToken;
 import com.autoadda.apis.identity.entity.Role;
 import com.autoadda.apis.identity.entity.User;
 import com.autoadda.apis.identity.exception.MemberAlreadyPresentException;
+import com.autoadda.apis.identity.exception.MemberNotExistException;
 import com.autoadda.apis.identity.exception.ResourceNotFoundException;
 import com.autoadda.apis.identity.mapper.UserMapper;
 import com.autoadda.apis.identity.request.ResetPasswordRequest;
@@ -24,6 +25,7 @@ import com.autoadda.apis.identity.util.ERole;
 import com.autoadda.apis.identity.validators.DataValidator;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -237,6 +239,50 @@ public class IdentityServiceImpl implements IdentityService {
         String number = authentication.getName ( );
         return userRepository.findByMobileNumber ( number )
                 .orElseThrow ( () -> new JwtException ( "User not found" ) );
+    }
+
+    @Override
+    public GenericResponse updateRole(Integer id, ERole role) {
+        Role role1 = roleRepository.findByName ( role ).orElseThrow ( () -> new ResourceNotFoundException ( "role not found with name: " + role ) );
+        User user = userRepository.findById ( id ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with id: " + id ) );
+        Set<Role> roles = user.getRoles ( );
+        roles.add ( role1 );
+        user.setRoles ( roles );
+        User save = userRepository.save ( user );
+        return GenericResponse.builder ( )
+                .status ( "success" )
+                .code ( "200" )
+                .message ( "role added successfully" )
+                .body ( save.getRoles () )
+                .build ( );
+    }
+
+    @Override
+    public GenericResponse removeRole(Integer id, ERole role) {
+        Role role1 = roleRepository.findByName ( role ).orElseThrow ( () -> new ResourceNotFoundException ( "role not found with name: " + role ) );
+        User user = userRepository.findById ( id ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with id: " + id ) );
+        Set<Role> roles = user.getRoles ( );
+        roles.remove ( role1 );
+        user.setRoles ( roles );
+        User save = userRepository.save ( user );
+        return GenericResponse.builder ( )
+                .status ( "success" )
+                .code ( "200" )
+                .message ( "role added successfully" )
+                .body ( save.getRoles () )
+                .build ( );
+    }
+
+    @Override
+    public UserResponse getUserDetailByPhoneNumber(String mobileNumber) {
+        User user = userRepository.findByMobileNumber ( mobileNumber ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with mobile number: " + mobileNumber ) );
+        return UserResponse.builder ( )
+                .id ( user.getId ( ) )
+                .name ( user.getFirstName ( ).concat ( " " + user.getLastName ( ) ) )
+                .email ( user.getEmail ( ) )
+                .mobileNumber ( user.getMobileNumber ( ) )
+                .isVerified ( user.getIsVerified ( ) )
+                .build ( );
     }
 //    @Override
 //    public Customer createCustomerDetails(Customer customer) {

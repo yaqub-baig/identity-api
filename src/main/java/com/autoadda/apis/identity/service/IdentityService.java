@@ -7,6 +7,7 @@ import com.autoadda.apis.identity.request.UserRegisterRequest;
 import com.autoadda.apis.identity.request.VerifyOtpRequest;
 import com.autoadda.apis.identity.response.GenericResponse;
 import com.autoadda.apis.identity.response.UserResponse;
+import com.autoadda.apis.identity.util.ERole;
 
 public interface IdentityService {
 
@@ -31,6 +32,12 @@ public interface IdentityService {
     UserResponse getUser(Integer id);
 
     User getCurrentUser();
+
+    GenericResponse updateRole(Integer id, ERole role);
+
+    GenericResponse removeRole(Integer id, ERole role);
+
+    UserResponse getUserDetailByPhoneNumber(String phoneNumber);
 
 //	public Customer createCustomerDetails(Customer customer);
 

@@ -42,7 +42,12 @@ public class SecurityConfig {
                 .authorizeRequests ( auth -> auth
                         .antMatchers ( HttpMethod.POST, "/auth/user/**", "/auth/logout" )
                         .permitAll ( )
-                        .antMatchers ( HttpMethod.GET, "/auth/*" ).permitAll ( )
+                        .antMatchers ( HttpMethod.PUT, "/auth/update/role/*" )
+                        .permitAll ()
+                        .antMatchers ( HttpMethod.DELETE, "/auth/remove/role/*" )
+                        .permitAll ()
+                        .antMatchers ( HttpMethod.GET, "/auth/*", "/auth/byNumber/*" )
+                        .permitAll ( )
                         .antMatchers (
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",

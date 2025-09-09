@@ -1,12 +1,10 @@
 package com.autoadda.apis.identity.controller;
 
-import com.autoadda.apis.identity.request.ResetPasswordRequest;
-import com.autoadda.apis.identity.request.SignInRequest;
-import com.autoadda.apis.identity.request.UserRegisterRequest;
-import com.autoadda.apis.identity.request.VerifyOtpRequest;
+import com.autoadda.apis.identity.request.*;
 import com.autoadda.apis.identity.response.GenericResponse;
 import com.autoadda.apis.identity.response.UserResponse;
 import com.autoadda.apis.identity.service.IdentityService;
+import com.autoadda.apis.identity.util.ERole;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -14,6 +12,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -210,7 +210,21 @@ public class IdentityController {
     public UserResponse getUser(@PathVariable Integer id) {
         return identityService.getUser ( id );
     }
-	/*
+
+    @PutMapping("/update/role/{id}")
+    public GenericResponse updateRole(@PathVariable Integer id, @RequestParam ERole role) {
+        return identityService.updateRole ( id, role );
+    }
+
+    @DeleteMapping("/remove/role/{id}")
+    public GenericResponse removeRole(@PathVariable Integer id, @RequestParam ERole role) {
+        return identityService.removeRole( id, role );
+    }
+    @GetMapping("/byNumber/{phoneNumber}")
+    public ResponseEntity<UserResponse> getUserDetails(@PathVariable String phoneNumber) {
+        return   new ResponseEntity<> ( identityService.getUserDetailByPhoneNumber ( phoneNumber ),HttpStatus.OK);
+    }
+	/**
 	@Operation(summary = "Encrypting the string and resulting encryted string")
 	@ApiResponses(value = { 
 	  @ApiResponse(responseCode = "200", description = "successfull string encryption", 
@@ -236,6 +250,6 @@ public class IdentityController {
 	public GenericResponse decrypt(@RequestParam String input) {
 		String decryptedString = platformAuthenticationService.decryptString(input);
 		return GenericResponse.builder().status("sucess").code("200").message("customer created successfully..!").body(decryptedString).build();
-	}*/
+	}**/
 
 }

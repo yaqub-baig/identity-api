@@ -82,6 +82,12 @@ public class GlobalExceptionHandler {
         return buildResponse ( ex, HttpStatus.BAD_REQUEST, msg );
     }
 
+    @ExceptionHandler(MemberNotExistException.class)
+    public ResponseEntity<GenericResponse> handleMemberNotExistException(MemberNotExistException ex) {
+        return buildResponse ( ex, HttpStatus.BAD_REQUEST, ex.getMessage ( ) );
+    }
+
+
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<GenericResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex) {
         log.warn ( "Unsupported HTTP method", ex );

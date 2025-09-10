@@ -7,7 +7,6 @@ import com.autoadda.apis.identity.entity.RefreshToken;
 import com.autoadda.apis.identity.entity.Role;
 import com.autoadda.apis.identity.entity.User;
 import com.autoadda.apis.identity.exception.MemberAlreadyPresentException;
-import com.autoadda.apis.identity.exception.MemberNotExistException;
 import com.autoadda.apis.identity.exception.ResourceNotFoundException;
 import com.autoadda.apis.identity.mapper.UserMapper;
 import com.autoadda.apis.identity.request.ResetPasswordRequest;
@@ -25,7 +24,6 @@ import com.autoadda.apis.identity.util.ERole;
 import com.autoadda.apis.identity.validators.DataValidator;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -37,6 +35,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 
 @Slf4j
@@ -95,16 +94,17 @@ public class IdentityServiceImpl implements IdentityService {
     @Override
     public GenericResponse verifyOtp(VerifyOtpRequest request) {
         request.setMobileNumber ( "+971" + request.getMobileNumber ( ) );
-
+        AtomicReference<String> userId = new AtomicReference<> ( "" );
         boolean isVerified = notificationAdaptor.verifyOtp ( request );
         if ( isVerified ) {
             userRepository.findByMobileNumber ( request.getMobileNumber ( ) )
                     .ifPresent ( user -> {
+
                         user.setIsVerified ( true );
-                        userRepository.save ( user );
+                        userId.set ( userRepository.save ( user ).getId ().toString () );
                     } )
             ;
-            return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "otp verified" ).build ( );
+            return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "otp verified Your auto adda id is "+userId ).build ( );
         } else {
             return GenericResponse.builder ( ).status ( "failed" ).code ( "500" ).message ( "invalid otp" ).build ( );
         }

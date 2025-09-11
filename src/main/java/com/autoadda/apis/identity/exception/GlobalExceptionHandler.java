@@ -173,7 +173,7 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<GenericResponse> buildResponse(Exception ex, HttpStatus status, String message) {
-        return ResponseEntity.status ( HttpStatus.OK ).body ( GenericResponse.builder ( ).status ( "failed" )
+        return ResponseEntity.status ( status ).body ( GenericResponse.builder ( ).status ( "failed" )
                 .code ( String.valueOf ( status.value ( ) ) ).message ( message ).build ( ) );
     }
 

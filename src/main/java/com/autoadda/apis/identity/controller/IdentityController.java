@@ -1,5 +1,6 @@
 package com.autoadda.apis.identity.controller;
 
+import com.autoadda.apis.identity.adopter.NotificationAdaptor;
 import com.autoadda.apis.identity.request.*;
 import com.autoadda.apis.identity.response.GenericResponse;
 import com.autoadda.apis.identity.response.UserResponse;
@@ -10,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -20,10 +22,12 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @RestController
 @RequestMapping("/auth")
+@RequiredArgsConstructor
 public class IdentityController {
 
-    @Autowired
-    private IdentityService identityService;
+
+    private final IdentityService identityService;
+    private final NotificationAdaptor notificationAdaptor;
 
 
     @Operation(summary = "Get a welcome message")
@@ -223,6 +227,11 @@ public class IdentityController {
     @GetMapping("/byNumber/{phoneNumber}")
     public ResponseEntity<UserResponse> getUserDetails(@PathVariable String phoneNumber) {
         return   new ResponseEntity<> ( identityService.getUserDetailByPhoneNumber ( phoneNumber ),HttpStatus.OK);
+    }
+
+    @PostMapping("/send-sms")
+    public GenericResponse sendSms(@RequestBody SmsRequest request) {
+        return notificationAdaptor.sendSms(request);
     }
 	/**
 	@Operation(summary = "Encrypting the string and resulting encryted string")

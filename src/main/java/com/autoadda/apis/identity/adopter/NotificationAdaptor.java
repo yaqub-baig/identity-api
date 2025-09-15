@@ -2,6 +2,7 @@ package com.autoadda.apis.identity.adopter;
 
 import com.autoadda.apis.identity.exception.OtpExpiredException;
 import com.autoadda.apis.identity.exception.OtpNotSentException;
+import com.autoadda.apis.identity.request.SmsRequest;
 import com.autoadda.apis.identity.request.VerifyOtpRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -112,5 +113,38 @@ public class NotificationAdaptor {
 			else {throw new OtpExpiredException ( "OTP has expired" );}
 		}
 		return false;
+	}
+
+	public GenericResponse sendSms(SmsRequest request) {
+		RestTemplate restTemplate = new RestTemplate ( );
+		HttpHeaders headers = new HttpHeaders ( );
+		headers.setContentType ( MediaType.APPLICATION_FORM_URLENCODED );
+		MultiValueMap<String, String> params = new LinkedMultiValueMap<> ( );
+		params.add ( "api_key", apiKey );
+		params.add ( "type", "text" );
+		params.add ( "contacts", request.getPhoneNumber ( ) );
+		params.add ( "senderid", senderId );
+		params.add ( "msg", request.getMessage () );
+		HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<> ( params, headers );
+
+		ResponseEntity<String> response = restTemplate.exchange (
+				smsApiUrl,
+				HttpMethod.POST,
+				entity,
+				String.class
+		);
+		log.info ( "SMS response: " + response.getBody () );
+		if (response.getStatusCode().is2xxSuccessful()) {
+			return GenericResponse.builder()
+					.status("success")
+					.code("200")
+					.message("OTP sent successfully")
+					.build();
+		} else {
+			log.error("Failed to send OTP. Status: {}, Response: {}",
+					response.getStatusCodeValue(),
+					response.getBody());
+			throw new OtpNotSentException("Failed to send OTP. Status: " + response.getStatusCodeValue());
+		}
 	}
 }

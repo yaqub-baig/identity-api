@@ -138,7 +138,7 @@ public class NotificationAdaptor {
 			return GenericResponse.builder()
 					.status("success")
 					.code("200")
-					.message("OTP sent successfully")
+					.message("message  sent successfully")
 					.build();
 		} else {
 			log.error("Failed to send OTP. Status: {}, Response: {}",

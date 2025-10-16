@@ -9,6 +9,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -51,5 +53,8 @@ public class User {
 			inverseJoinColumns = @JoinColumn(name = "role_id"))
 	private Set<Role> roles;
 
-	// media file for profile photo
+	@OneToMany
+	@JoinColumn(name = "user_profile_image")
+	private List<MediaFile> profileImage = new ArrayList<> ( );
+
 }

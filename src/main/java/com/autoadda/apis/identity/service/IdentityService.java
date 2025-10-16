@@ -1,10 +1,7 @@
 package com.autoadda.apis.identity.service;
 
 import com.autoadda.apis.identity.entity.User;
-import com.autoadda.apis.identity.request.ResetPasswordRequest;
-import com.autoadda.apis.identity.request.SignInRequest;
-import com.autoadda.apis.identity.request.UserRegisterRequest;
-import com.autoadda.apis.identity.request.VerifyOtpRequest;
+import com.autoadda.apis.identity.request.*;
 import com.autoadda.apis.identity.response.GenericResponse;
 import com.autoadda.apis.identity.response.UserResponse;
 import com.autoadda.apis.identity.util.ERole;
@@ -38,6 +35,8 @@ public interface IdentityService {
     GenericResponse removeRole(Integer id, ERole role);
 
     UserResponse getUserDetailByPhoneNumber(String phoneNumber);
+
+    GenericResponse updateUserProfile(UserUpdateRequest request);
 
 //	public Customer createCustomerDetails(Customer customer);
 

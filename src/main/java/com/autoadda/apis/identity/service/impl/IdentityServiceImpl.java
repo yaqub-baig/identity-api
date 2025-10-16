@@ -1,18 +1,17 @@
 package com.autoadda.apis.identity.service.impl;
 
 import com.autoadda.apis.identity.adopter.NotificationAdaptor;
+import com.autoadda.apis.identity.dao.MediaFileRepository;
 import com.autoadda.apis.identity.dao.RoleRepository;
 import com.autoadda.apis.identity.dao.UserRepository;
+import com.autoadda.apis.identity.entity.MediaFile;
 import com.autoadda.apis.identity.entity.RefreshToken;
 import com.autoadda.apis.identity.entity.Role;
 import com.autoadda.apis.identity.entity.User;
 import com.autoadda.apis.identity.exception.MemberAlreadyPresentException;
 import com.autoadda.apis.identity.exception.ResourceNotFoundException;
 import com.autoadda.apis.identity.mapper.UserMapper;
-import com.autoadda.apis.identity.request.ResetPasswordRequest;
-import com.autoadda.apis.identity.request.SignInRequest;
-import com.autoadda.apis.identity.request.UserRegisterRequest;
-import com.autoadda.apis.identity.request.VerifyOtpRequest;
+import com.autoadda.apis.identity.request.*;
 import com.autoadda.apis.identity.response.AuthResponse;
 import com.autoadda.apis.identity.response.GenericResponse;
 import com.autoadda.apis.identity.response.UserResponse;
@@ -52,6 +51,7 @@ public class IdentityServiceImpl implements IdentityService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final RefreshTokenService refreshTokenService;
+    private final MediaFileRepository mediafileRepository;
 
 //    private final CustomerRepository customerRepository;
 //    private final AuthenticationDetailsRepository authenticationDetailsRepository;
@@ -210,6 +210,7 @@ public class IdentityServiceImpl implements IdentityService {
                     .email ( user.getEmail ( ) )
                     .mobileNumber ( user.getMobileNumber ( ) )
                     .isVerified ( user.getIsVerified ( ) )
+                    .profileImage ( user.getProfileImage ().isEmpty ()? null : user.getProfileImage ().get(0) )
                     .build ( );
         } ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with id: " + id ) );
     }
@@ -281,7 +282,41 @@ public class IdentityServiceImpl implements IdentityService {
                 .name ( user.getFirstName ( ).concat ( " " + user.getLastName ( ) ) )
                 .email ( user.getEmail ( ) )
                 .mobileNumber ( user.getMobileNumber ( ) )
+                .profileImage ( user.getProfileImage ().isEmpty ()? null : user.getProfileImage ().get(0) )
                 .isVerified ( user.getIsVerified ( ) )
+                .build ( );
+    }
+
+    @Override
+    public GenericResponse updateUserProfile(UserUpdateRequest request) {
+        User currentUser = getCurrentUser ( );
+        if(request.getFirstName ()!=null){
+            currentUser.setFirstName ( request.getFirstName ( ) );
+        }
+        if(request.getLastName ()!=null){
+            currentUser.setLastName ( request.getLastName ( ) );
+        }
+        if(request.getProfileImageId ()!=null){
+            MediaFile profile = mediafileRepository.findById ( request.getProfileImageId ( ) ).orElseThrow ( () -> new ResourceNotFoundException ( "image not found" ) );
+            currentUser.getProfileImage ().clear ();
+            currentUser.getProfileImage ().add (profile);
+        }
+        User user = userRepository.save ( currentUser );
+
+        UserResponse userResponse = UserResponse.builder ( )
+                .id ( user.getId ( ) )
+                .name ( user.getFirstName ( ).concat ( " " + user.getLastName ( ) ) )
+                .email ( user.getEmail ( ) )
+                .mobileNumber ( user.getMobileNumber ( ) )
+                .isVerified ( user.getIsVerified ( ) )
+                .profileImage ( user.getProfileImage ().isEmpty ()? null : user.getProfileImage ().get(0) )
+                .build ( );
+
+        return GenericResponse
+                .builder ( )
+                .status ( "success" )
+                .code ( "200" )
+                .body ( userResponse )
                 .build ( );
     }
 //    @Override

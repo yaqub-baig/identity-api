@@ -13,7 +13,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -222,43 +221,46 @@ public class IdentityController {
 
     @DeleteMapping("/remove/role/{id}")
     public GenericResponse removeRole(@PathVariable Integer id, @RequestParam ERole role) {
-        return identityService.removeRole( id, role );
+        return identityService.removeRole ( id, role );
     }
+
     @GetMapping("/byNumber/{phoneNumber}")
     public ResponseEntity<UserResponse> getUserDetails(@PathVariable String phoneNumber) {
-        return   new ResponseEntity<> ( identityService.getUserDetailByPhoneNumber ( phoneNumber ),HttpStatus.OK);
+        return new ResponseEntity<> ( identityService.getUserDetailByPhoneNumber ( phoneNumber ), HttpStatus.OK );
+    }
+    @PutMapping("/update/profile")
+    public GenericResponse updateProfile(@RequestBody UserUpdateRequest request) {
+    return identityService.updateUserProfile (request)  ;
     }
 
     @PostMapping("/send-sms")
     public GenericResponse sendSms(@RequestBody SmsRequest request) {
-        return notificationAdaptor.sendSms(request);
+        return notificationAdaptor.sendSms ( request );
     }
-	/**
-	@Operation(summary = "Encrypting the string and resulting encryted string")
-	@ApiResponses(value = { 
-	  @ApiResponse(responseCode = "200", description = "successfull string encryption", 
-	    content = { @Content(mediaType = "application/json", 
-	      schema = @Schema(implementation = GenericResponse .class)) }),
-	  @ApiResponse(responseCode = "404", description = "encrypt api not found", 
-	    content = @Content) })
-	@GetMapping("encrypt")
-	public GenericResponse encrypt(@RequestParam String input) {
-		String encryptedString = platformAuthenticationService.encryptString(input);
-		return GenericResponse.builder().status("sucess").code("200").message("customer created successfully..!").body(encryptedString).build();
-	}
-	
-	
-	@Operation(summary = "Decrypting the string and resulting decryted string")
-	@ApiResponses(value = { 
-	  @ApiResponse(responseCode = "200", description = "successfull string decryption", 
-	    content = { @Content(mediaType = "application/json", 
-	      schema = @Schema(implementation = GenericResponse .class)) }),
-	  @ApiResponse(responseCode = "404", description = "decrypt api not found", 
-	    content = @Content) })
-	@GetMapping("decrypt")
-	public GenericResponse decrypt(@RequestParam String input) {
-		String decryptedString = platformAuthenticationService.decryptString(input);
-		return GenericResponse.builder().status("sucess").code("200").message("customer created successfully..!").body(decryptedString).build();
-	}**/
+    /**
+     @Operation(summary = "Encrypting the string and resulting encryted string")
+     @ApiResponses(value = {
+     @ApiResponse(responseCode = "200", description = "successfull string encryption",
+     content = { @Content(mediaType = "application/json",
+     schema = @Schema(implementation = GenericResponse .class)) }),
+     @ApiResponse(responseCode = "404", description = "encrypt api not found",
+     content = @Content) })
+     @GetMapping("encrypt") public GenericResponse encrypt(@RequestParam String input) {
+     String encryptedString = platformAuthenticationService.encryptString(input);
+     return GenericResponse.builder().status("sucess").code("200").message("customer created successfully..!").body(encryptedString).build();
+     }
+
+
+     @Operation(summary = "Decrypting the string and resulting decryted string")
+     @ApiResponses(value = {
+     @ApiResponse(responseCode = "200", description = "successfull string decryption",
+     content = { @Content(mediaType = "application/json",
+     schema = @Schema(implementation = GenericResponse .class)) }),
+     @ApiResponse(responseCode = "404", description = "decrypt api not found",
+     content = @Content) })
+     @GetMapping("decrypt") public GenericResponse decrypt(@RequestParam String input) {
+     String decryptedString = platformAuthenticationService.decryptString(input);
+     return GenericResponse.builder().status("sucess").code("200").message("customer created successfully..!").body(decryptedString).build();
+     }**/
 
 }

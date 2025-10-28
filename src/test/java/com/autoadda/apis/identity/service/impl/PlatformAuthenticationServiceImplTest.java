@@ -968,7 +968,7 @@ class PlatformAuthenticationServiceImplTest {
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
 
         // Execute the method
-        GenericResponse response = platformAuthenticationService.resetPassword(request, autoAddaId );
+        GenericResponse response = platformAuthenticationService.resetPassword(request );
 
         // Verify the results
         assertThat(response).isNotNull();
@@ -997,7 +997,7 @@ class PlatformAuthenticationServiceImplTest {
         when(userRepository.findById(currentUserId)).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThatThrownBy(() -> platformAuthenticationService.resetPassword(request, autoAddaId ))
+        assertThatThrownBy(() -> platformAuthenticationService.resetPassword(request ))
                 .isInstanceOf( ResourceNotFoundException.class)
                 .hasMessage("user not found with phoneNumber");
 
@@ -1025,7 +1025,7 @@ class PlatformAuthenticationServiceImplTest {
         when(passwordEncoder.encode(null)).thenReturn("encodedNull");
 
         // Act
-        GenericResponse actualResponse = platformAuthenticationService.resetPassword(request, autoAddaId );
+        GenericResponse actualResponse = platformAuthenticationService.resetPassword(request );
 
         // Assert
         assertThat(actualResponse).isNotNull();
@@ -1057,7 +1057,7 @@ class PlatformAuthenticationServiceImplTest {
         when(passwordEncoder.encode("")).thenReturn("encodedEmpty");
 
         // Act
-        GenericResponse actualResponse = platformAuthenticationService.resetPassword(request, autoAddaId );
+        GenericResponse actualResponse = platformAuthenticationService.resetPassword(request );
 
         // Assert
         assertThat(actualResponse).isNotNull();

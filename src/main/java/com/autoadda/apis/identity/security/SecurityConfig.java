@@ -56,7 +56,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/api-docs/**",
                                 "/swagger-resources/**",
-                                "/webjars/**" ).permitAll ( )
+                                "/webjars/**",
+                                "/actuator/**" ).permitAll ( )
                         .anyRequest ( )
                         .authenticated ( )
                 )
@@ -115,7 +116,7 @@ public class SecurityConfig {
                 "Authorization",
                 "Content-Type",
                 "X-Requested-With",
-                "X-Auto-Adda_Id",
+                "X-Auto-Adda-Id",
                 "accept",
                 "Origin",
                 "Access-Control-Request-Method",

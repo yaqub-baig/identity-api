@@ -203,7 +203,7 @@ public class IdentityController {
             @RequestBody ResetPasswordRequest request) {
         return identityService.resetPassword ( request );
     }
-
+    @CrossOrigin  
     @PostMapping("/logout")
     public GenericResponse logout(@RequestHeader(value = "X-Auto-Adda-Id") String autoAddaId) {
         return identityService.logout ( autoAddaId );

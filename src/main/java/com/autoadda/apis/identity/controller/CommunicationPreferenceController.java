@@ -4,7 +4,7 @@ package com.autoadda.apis.identity.controller;
 import com.autoadda.apis.identity.entity.CommunicationPreference;
 import com.autoadda.apis.identity.request.CommunicationPreferenceRequest;
 import com.autoadda.apis.identity.service.CommunicationPreferenceService;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
+import com.autoadda.apis.identity.service.IdentityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,48 +14,35 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class CommunicationPreferenceController {
     private final CommunicationPreferenceService service;
+    private final IdentityService identityService;
 
     @PostMapping
-    public ResponseEntity<CommunicationPreference> setPreferences(@RequestBody CommunicationPreferenceRequest preference) {
-        return ResponseEntity.ok ( service.saveOrUpdatePreference ( preference ) );
+    public ResponseEntity<CommunicationPreference> createOrUpdatePreferences(
+            @RequestBody CommunicationPreferenceRequest preference) {
+        return ResponseEntity.ok(service.saveOrUpdatePreference(preference));
+    }
+
+    @PutMapping
+    public ResponseEntity<CommunicationPreference> updatePreferences(
+            @RequestBody CommunicationPreferenceRequest preference) {
+        return ResponseEntity.ok(service.saveOrUpdatePreference(preference));
+    }
+
+    @GetMapping
+    public ResponseEntity<CommunicationPreference> getMyPreferences() {
+        Integer currentUserId = identityService.getCurrentUser().getId();
+        return service.getPreference(currentUserId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/{customerId}")
-    public ResponseEntity<CommunicationPreference> getPreferences(@PathVariable Integer customerId) {
-        return service.getPreference ( customerId ).map ( ResponseEntity::ok ).orElse ( ResponseEntity.notFound ( ).build ( ) );
+    public ResponseEntity<CommunicationPreference> getPreferencesByCustomerId(
+            @PathVariable Integer customerId) {
+        // This endpoint could be used by admins to view any user's preferences
+        // For now, allowing it but in production you should add admin role check
+        return service.getPreference(customerId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
-
-    @GetMapping("/{id}/{customerId}")
-    public ResponseEntity<CommunicationPreference> getPreferencesByIdAndCustomerId(@PathVariable Integer id,
-                                                                                   @PathVariable Integer customerId) {
-        return service.getPreferenceByIdAndCustomerId ( id, customerId ).map ( ResponseEntity::ok )
-                .orElse ( ResponseEntity.notFound ( ).build ( ) );
-    }
-
-    @GetMapping("/status/{customerId}/{status}")
-    public ResponseEntity<CommunicationPreference> getPreferencesByCustomerIdAndStatus(@PathVariable Integer customerId,
-                                                                                       @PathVariable String status) {
-        return service.getPreferenceByCustomerIdAndStatus ( customerId, status ).map ( ResponseEntity::ok )
-                .orElse ( ResponseEntity.notFound ( ).build ( ) );
-    }
-
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<Void> deletePreference(@PathVariable Integer id) {
-        service.deletePreference ( id );
-        return ResponseEntity.noContent ( ).build ( );
-    }
-
-    @PostMapping("/update")
-    public ResponseEntity<CommunicationPreference> updatePreference(
-            @RequestBody CommunicationPreferenceRequest preference) {
-        return ResponseEntity.ok ( service.saveOrUpdatePreference ( preference ) );
-    }
-
-    @GetMapping("/update/{id}/{customerId}")
-    public ResponseEntity<CommunicationPreference> updatePreferenceByIdAndCustomerId(@PathVariable Integer id,
-                                                                                     @PathVariable Integer customerId) {
-        return service.getPreferenceByIdAndCustomerId ( id, customerId ).map ( ResponseEntity::ok )
-                .orElse ( ResponseEntity.notFound ( ).build ( ) );
-    }
-
 }

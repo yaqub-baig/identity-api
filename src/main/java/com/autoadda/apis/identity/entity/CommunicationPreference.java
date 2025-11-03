@@ -6,8 +6,6 @@ import javax.persistence.*;
 import com.autoadda.apis.identity.util.Status;
 import lombok.*;
 
-import java.time.LocalTime;
-
 @Entity
 @Getter
 @Setter
@@ -41,8 +39,4 @@ public class CommunicationPreference {
 	@Enumerated(EnumType.STRING)
 	private Status status;
 
-	// Time range (optional): Do not disturb outside this window
-	private LocalTime doNotDisturbStart; // e.g., 21:00 for 9 PM
-	private LocalTime doNotDisturbEnd; // e.g., 07:00 for 7 AM
-	// Getters and setters
 }

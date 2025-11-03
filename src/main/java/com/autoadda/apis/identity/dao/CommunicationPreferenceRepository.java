@@ -10,9 +10,4 @@ import java.util.Optional;
 @Repository
 public interface CommunicationPreferenceRepository extends JpaRepository<CommunicationPreference, Integer> {
 	Optional<CommunicationPreference> findByUserId(Integer customerId);
-
-	Optional<CommunicationPreference> findByIdAndUserId(Integer id, Integer customerId);
-
-	Optional<CommunicationPreference> findByUserIdAndStatus(Integer customerId, String status);
-
 }

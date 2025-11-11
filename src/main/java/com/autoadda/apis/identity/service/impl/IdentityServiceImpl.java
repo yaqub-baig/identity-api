@@ -1,9 +1,11 @@
 package com.autoadda.apis.identity.service.impl;
 
 import com.autoadda.apis.identity.adopter.NotificationAdaptor;
+import com.autoadda.apis.identity.dao.CommunicationPreferenceRepository;
 import com.autoadda.apis.identity.dao.MediaFileRepository;
 import com.autoadda.apis.identity.dao.RoleRepository;
 import com.autoadda.apis.identity.dao.UserRepository;
+import com.autoadda.apis.identity.entity.CommunicationPreference;
 import com.autoadda.apis.identity.entity.MediaFile;
 import com.autoadda.apis.identity.entity.RefreshToken;
 import com.autoadda.apis.identity.entity.Role;
@@ -20,6 +22,7 @@ import com.autoadda.apis.identity.security.UserSecurityDetails;
 import com.autoadda.apis.identity.service.IdentityService;
 import com.autoadda.apis.identity.service.RefreshTokenService;
 import com.autoadda.apis.identity.util.ERole;
+import com.autoadda.apis.identity.util.Status;
 import com.autoadda.apis.identity.validators.DataValidator;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -52,6 +56,7 @@ public class IdentityServiceImpl implements IdentityService {
     private final JwtUtil jwtUtil;
     private final RefreshTokenService refreshTokenService;
     private final MediaFileRepository mediafileRepository;
+    private final CommunicationPreferenceRepository communicationPreferenceRepository;
 
 //    private final CustomerRepository customerRepository;
 //    private final AuthenticationDetailsRepository authenticationDetailsRepository;
@@ -92,6 +97,7 @@ public class IdentityServiceImpl implements IdentityService {
     }
 
     @Override
+    @Transactional
     public GenericResponse verifyOtp(VerifyOtpRequest request) {
         request.setMobileNumber ( "+971" + request.getMobileNumber ( ) );
         AtomicReference<String> userId = new AtomicReference<> ( "" );
@@ -99,9 +105,12 @@ public class IdentityServiceImpl implements IdentityService {
         if ( isVerified ) {
             userRepository.findByMobileNumber ( request.getMobileNumber ( ) )
                     .ifPresent ( user -> {
-
                         user.setIsVerified ( true );
-                        userId.set ( userRepository.save ( user ).getId ().toString () );
+                        User savedUser = userRepository.save ( user );
+                        userId.set ( savedUser.getId ().toString () );
+
+                        // Create default communication preferences if they don't exist
+                        createDefaultCommunicationPreferences ( savedUser );
                     } )
             ;
             return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "otp verified Your auto adda id is "+userId ).build ( );
@@ -222,6 +231,10 @@ public class IdentityServiceImpl implements IdentityService {
         if ( authentication == null || ! authentication.isAuthenticated ( ) ) {
             throw new JwtException ( "User not authenticated" );
         }
+        if ( authentication.getPrincipal ( ) instanceof UserSecurityDetails ) {
+            UserSecurityDetails userDetails = (UserSecurityDetails) authentication.getPrincipal ( );
+            return userDetails.getUser ( ).getId ( );
+        }
         log.info ( "authentication - > " + authentication.getName ( ) );
         String number = authentication.getName ( );
         return userRepository.findByMobileNumber ( number )
@@ -235,6 +248,10 @@ public class IdentityServiceImpl implements IdentityService {
         log.info ( "authentication - > " + authentication );
         if ( authentication == null || ! authentication.isAuthenticated ( ) ) {
             throw new JwtException ( "User not authenticated" );
+        }
+        if ( authentication.getPrincipal ( ) instanceof UserSecurityDetails ) {
+            UserSecurityDetails userDetails = (UserSecurityDetails) authentication.getPrincipal ( );
+            return userDetails.getUser ( );
         }
         log.info ( "authentication - > " + authentication.getName ( ) );
         String number = authentication.getName ( );
@@ -288,8 +305,13 @@ public class IdentityServiceImpl implements IdentityService {
     }
 
     @Override
+    @Transactional
     public GenericResponse updateUserProfile(UserUpdateRequest request) {
-        User currentUser = getCurrentUser ( );
+        // Fetch fresh User from database to avoid LazyInitializationException
+        Integer userId = getCurrentUserId ( );
+        User currentUser = userRepository.findById ( userId )
+                .orElseThrow ( () -> new ResourceNotFoundException ( "User not found" ) );
+
         if(request.getFirstName ()!=null){
             currentUser.setFirstName ( request.getFirstName ( ) );
         }
@@ -594,5 +616,40 @@ public class IdentityServiceImpl implements IdentityService {
 //        return GenericResponse.builder ( ).status ( "failed" ).code ( "" ).message ( "Issue while login" ).build ( );
 //    }
 
+    /**
+     * Creates default communication preferences for a newly verified user
+     * @param user The user for whom to create preferences
+     */
+    private void createDefaultCommunicationPreferences(User user) {
+        // Check if preferences already exist
+        if (communicationPreferenceRepository.findByUserId(user.getId()).isPresent()) {
+            log.info("Communication preferences already exist for user ID: {}", user.getId());
+            return;
+        }
+
+        log.info("Creating default communication preferences for user ID: {}", user.getId());
+
+        // Build default preferences using builder pattern
+        CommunicationPreference defaultPreferences = CommunicationPreference.builder()
+                .user(user)
+                // Critical notifications - enabled by default
+                .emailOnServiceUpdates(true)
+                .smsOnServiceUpdates(true)
+                .emailOnAppointments(true)
+                .smsOnAppointments(true)
+                .emailOnReminders(true)
+                .smsOnReminders(true)
+                .emailOnQuotationRequests(true)
+                .smsOnQuotationRequests(true)
+                // Marketing - disabled by default (opt-in)
+                .emailOnOffers(false)
+                .smsOnOffers(false)
+                // Status
+                .status(Status.ACTIVE)
+                .build();
+
+        communicationPreferenceRepository.save(defaultPreferences);
+        log.info("Successfully created default communication preferences for user ID: {}", user.getId());
+    }
 
 }

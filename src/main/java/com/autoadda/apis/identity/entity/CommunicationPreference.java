@@ -4,6 +4,7 @@ package com.autoadda.apis.identity.entity;
 import javax.persistence.*;
 
 import com.autoadda.apis.identity.util.Status;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
 @Entity
@@ -19,6 +20,7 @@ public class CommunicationPreference {
 	private Integer id;
 
 	@OneToOne
+	@JsonIgnore
 	private User user; // Reference to the customer (could be VehicleOwner or User)
 
 	private Boolean emailOnServiceUpdates;

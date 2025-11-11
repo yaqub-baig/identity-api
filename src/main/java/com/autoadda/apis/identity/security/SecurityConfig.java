@@ -52,6 +52,7 @@ public class SecurityConfig {
                         .permitAll ( )
                         .antMatchers (
                                 "/swagger-ui/**",
+                                "/uploads/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/api-docs/**",

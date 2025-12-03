@@ -35,22 +35,23 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
-                .csrf ( AbstractHttpConfigurer::disable )
-                .cors ( cors -> cors.configurationSource ( corsConfigurationSource ( ) ) )
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 // For Spring Boot 2.7.14 (Spring Security 5.7.x)
-                .authorizeRequests ( auth -> auth
-                        .antMatchers ( HttpMethod.POST, "/auth/user/**"
-                                                        , "/auth/logout"
-                                                        ,"/auth/send-sms")
-                        .permitAll ( )
-                        .antMatchers ( HttpMethod.PUT, "/auth/update/role/*" )
-                        .permitAll ()
-                        .antMatchers ( HttpMethod.DELETE, "/auth/remove/role/*" )
-                        .permitAll ()
-                        .antMatchers ( HttpMethod.GET, "/auth/*", "/auth/byNumber/*" )
-                        .permitAll ( )
-                        .antMatchers (
+                .authorizeRequests(auth -> auth
+                        .antMatchers(HttpMethod.POST, "/auth/user/**"
+                                , "/auth/logout"
+                                , "/auth/send-sms"
+                                , "/auth/send-sms/**")
+                        .permitAll()
+                        .antMatchers(HttpMethod.PUT, "/auth/update/role/*")
+                        .permitAll()
+                        .antMatchers(HttpMethod.DELETE, "/auth/remove/role/*")
+                        .permitAll()
+                        .antMatchers(HttpMethod.GET, "/auth/*", "/auth/byNumber/*")
+                        .permitAll()
+                        .antMatchers(
                                 "/swagger-ui/**",
                                 "/uploads/**",
                                 "/swagger-ui.html",
@@ -58,62 +59,62 @@ public class SecurityConfig {
                                 "/api-docs/**",
                                 "/swagger-resources/**",
                                 "/webjars/**",
-                                "/actuator/**" ).permitAll ( )
-                        .anyRequest ( )
-                        .authenticated ( )
+                                "/actuator/**").permitAll()
+                        .anyRequest()
+                        .authenticated()
                 )
 
-                .exceptionHandling ( exception -> exception
-                        .authenticationEntryPoint ( (request, response, authException) -> {
-                            log.error ( "Unauthorized error: {}", authException.getMessage ( ) );
-                            response.setStatus ( 401 );
-                            response.setContentType ( "application/json" );
-                            response.getWriter ( ).write ( "{\"error\":\"Unauthorized\",\"message\":\"" + authException.getMessage ( ) + "\"}" );
-                        } )
-                        .accessDeniedHandler ( (request, response, accessDeniedException) -> {
-                            log.error ( "Forbidden error: {}", accessDeniedException.getMessage ( ) );
-                            response.setStatus ( 403 );
-                            response.setContentType ( "application/json" );
-                            response.getWriter ( ).write ( "{\"error\":\"Forbidden\",\"message\":\"" + accessDeniedException.getMessage ( ) + "\"}" );
-                        } )
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            log.error("Unauthorized error: {}", authException.getMessage());
+                            response.setStatus(401);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"" + authException.getMessage() + "\"}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            log.error("Forbidden error: {}", accessDeniedException.getMessage());
+                            response.setStatus(403);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\":\"Forbidden\",\"message\":\"" + accessDeniedException.getMessage() + "\"}");
+                        })
                 )
 
-                .sessionManagement ( session -> session
-                        .sessionCreationPolicy ( SessionCreationPolicy.STATELESS )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
-                .authenticationProvider ( authenticationProvider ( ) )
-                .addFilterBefore ( jwtAuthFilter, UsernamePasswordAuthenticationFilter.class )
-                .build ( );
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider ( );
-        authProvider.setUserDetailsService ( usersDetailsService );
-        authProvider.setPasswordEncoder ( passwordEncoder ( ) );
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(usersDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder ( );
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config = new CorsConfiguration ( );
+        CorsConfiguration config = new CorsConfiguration();
 
         // More secure CORS configuration
-        config.setAllowedOriginPatterns ( Arrays.asList (
+        config.setAllowedOriginPatterns(Arrays.asList(
                 "*"
-        ) );
+        ));
 
-        config.setAllowedMethods ( Arrays.asList (
+        config.setAllowedMethods(Arrays.asList(
                 "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
-        ) );
+        ));
 
-        config.setAllowedHeaders ( Arrays.asList (
+        config.setAllowedHeaders(Arrays.asList(
                 "Authorization",
                 "Content-Type",
                 "X-Requested-With",
@@ -123,23 +124,23 @@ public class SecurityConfig {
                 "Access-Control-Request-Method",
                 "Access-Control-Request-Headers",
                 "skip_zrok_interstitial"
-        ) );
+        ));
 
-        config.setExposedHeaders ( Arrays.asList (
+        config.setExposedHeaders(Arrays.asList(
                 "Access-Control-Allow-Origin",
                 "Access-Control-Allow-Credentials"
-        ) );
+        ));
 
-        config.setAllowCredentials ( true );
-        config.setMaxAge ( 3600L ); // Cache preflight response for 1 hour
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L); // Cache preflight response for 1 hour
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource ( );
-        source.registerCorsConfiguration ( "/**", config );
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager ( );
+        return config.getAuthenticationManager();
     }
 }

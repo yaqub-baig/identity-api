@@ -12,7 +12,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-
 import java.time.Instant;
 import java.util.UUID;
 
@@ -26,37 +25,38 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Override
     public String generateRefreshToken(User user) {
 
-        refreshTokenRepository.findByUser ( user ).ifPresent ( refreshTokenRepository::delete );
+        refreshTokenRepository.findByUser(user).ifPresent(refreshTokenRepository::delete);
 
-        RefreshToken refreshToken = new RefreshToken ( );
-        refreshToken.setUser ( user );
-        refreshToken.setExpiryDate ( Instant.now ( ).plusMillis ( refreshTokenDurationMs ) );
-        refreshToken.setToken ( UUID.randomUUID ( ).toString ( ) );
-        refreshToken.setToken ( refreshToken.getToken ( ) + "exp:" + refreshToken.getExpiryDate ( ).toEpochMilli ( ) );
-        refreshTokenRepository.save ( refreshToken );
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setUser(user);
+        refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenDurationMs));
+        refreshToken.setToken(UUID.randomUUID().toString());
+        refreshToken.setToken(refreshToken.getToken() + "exp:" + refreshToken.getExpiryDate().toEpochMilli());
+        refreshTokenRepository.save(refreshToken);
 
-        return refreshToken.getToken ( );
+        return refreshToken.getToken();
     }
 
     @Override
     public RefreshToken validateRefreshToken(String refreshToken) {
-        RefreshToken token = refreshTokenRepository.findByToken ( refreshToken ).orElseThrow ( () -> new ResourceNotFoundException ( "Token not found" ) );
-        return verifyExpiration ( token );
+        RefreshToken token = refreshTokenRepository.findByToken(refreshToken).orElseThrow(() -> new ResourceNotFoundException("Token not found"));
+        return verifyExpiration(token);
 
     }
+
     @Transactional
     @Override
     public GenericResponse deleteRefreshTokenByUserId(Integer currentUserId) {
-        refreshTokenRepository.deleteByUserId ( currentUserId );
-        return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "successfully logout" ).build ( );
+        refreshTokenRepository.deleteByUserId(currentUserId);
+        return GenericResponse.builder().status("success").code("200").message("successfully logout").build();
     }
 
     public RefreshToken verifyExpiration(RefreshToken token) {
-            if ( token.getExpiryDate ( ).compareTo ( Instant.now ( ) ) < 0 ) {
-                refreshTokenRepository.delete ( token );
-                throw new RefreshTokenExpiredException ( "Refresh token was expired" );
-            }
-            return token;
+        if (token.getExpiryDate().compareTo(Instant.now()) < 0) {
+            refreshTokenRepository.delete(token);
+            throw new RefreshTokenExpiredException("Refresh token was expired");
+        }
+        return token;
     }
 
 }

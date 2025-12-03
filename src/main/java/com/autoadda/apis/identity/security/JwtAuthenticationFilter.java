@@ -49,13 +49,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             null,
                             userDetails.getAuthorities()
                     );
-                    authToken.setDetails(new WebAuthenticationDetailsSource ().buildDetails(request));
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
-        } catch (Exception e ) {
+        } catch (Exception e) {
             // Invalid token - just continue without authentication
-            log.error ( "Invalid token: " + e.getMessage ( ) );
+            log.error("Invalid token: " + e.getMessage());
         }
         filterChain.doFilter(request, response);
     }

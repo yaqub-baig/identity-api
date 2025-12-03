@@ -1,14 +1,9 @@
 package com.autoadda.apis.identity.entity;
 
 
+import lombok.*;
+
 import javax.persistence.*;
-
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -20,41 +15,41 @@ import java.util.Set;
 @NoArgsConstructor
 @Builder
 @Table(name = "users", indexes = {
-		@Index(name = "idx_phone", columnList = "mobile_number", unique = true)
+        @Index(name = "idx_phone", columnList = "mobile_number", unique = true)
 })
 public class User {
-	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
-	@Column(name = "id")
-	private Integer id;
-	
-	@Column(name = "first_name")
-	private String firstName;
-	
-	@Column(name = "last_name")
-	private String lastName;
-	
-	@Column(name = "email")
-	private String email;
-	
-	@Column(name = "password")
-	private String password;
-	
-	@Column(name = "mobile_number",unique = true)
-	private String mobileNumber;
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "id")
+    private Integer id;
 
-	@Column(name = "is_verified")
-	private Boolean isVerified;
+    @Column(name = "first_name")
+    private String firstName;
 
-	@ManyToMany(fetch = FetchType.EAGER) // or LAZY if you prefer
-	@JoinTable(
-			name = "user_roles",
-			joinColumns = @JoinColumn(name = "user_id"),
-			inverseJoinColumns = @JoinColumn(name = "role_id"))
-	private Set<Role> roles;
+    @Column(name = "last_name")
+    private String lastName;
 
-	@OneToMany
-	@JoinColumn(name = "user_profile_image")
-	private List<MediaFile> profileImage = new ArrayList<> ( );
+    @Column(name = "email")
+    private String email;
+
+    @Column(name = "password")
+    private String password;
+
+    @Column(name = "mobile_number", unique = true)
+    private String mobileNumber;
+
+    @Column(name = "is_verified")
+    private Boolean isVerified;
+
+    @ManyToMany(fetch = FetchType.EAGER) // or LAZY if you prefer
+    @JoinTable(
+            name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id"))
+    private Set<Role> roles;
+
+    @OneToMany
+    @JoinColumn(name = "user_profile_image")
+    private List<MediaFile> profileImage = new ArrayList<>();
 
 }

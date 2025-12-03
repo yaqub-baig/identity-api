@@ -1,16 +1,18 @@
 package com.autoadda.apis.identity.exception;
 
 public class ResourceNotFoundException extends RuntimeException {
-    private String message;
+
     public ResourceNotFoundException() {
-        super ( );
+        super();
     }
+
     public ResourceNotFoundException(String message) {
-        super ( message );
-        this.message = message;
+        super(message);
+
     }
+
     public ResourceNotFoundException(String message, Throwable cause) {
-        super ( message, cause );
+        super(message, cause);
     }
 }
 

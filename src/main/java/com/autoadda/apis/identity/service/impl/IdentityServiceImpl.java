@@ -5,12 +5,9 @@ import com.autoadda.apis.identity.dao.CommunicationPreferenceRepository;
 import com.autoadda.apis.identity.dao.MediaFileRepository;
 import com.autoadda.apis.identity.dao.RoleRepository;
 import com.autoadda.apis.identity.dao.UserRepository;
-import com.autoadda.apis.identity.entity.CommunicationPreference;
-import com.autoadda.apis.identity.entity.MediaFile;
-import com.autoadda.apis.identity.entity.RefreshToken;
-import com.autoadda.apis.identity.entity.Role;
-import com.autoadda.apis.identity.entity.User;
+import com.autoadda.apis.identity.entity.*;
 import com.autoadda.apis.identity.exception.MemberAlreadyPresentException;
+import com.autoadda.apis.identity.exception.OtpNotSentException;
 import com.autoadda.apis.identity.exception.ResourceNotFoundException;
 import com.autoadda.apis.identity.mapper.UserMapper;
 import com.autoadda.apis.identity.request.*;
@@ -46,6 +43,11 @@ import java.util.concurrent.atomic.AtomicReference;
 @RequiredArgsConstructor
 public class IdentityServiceImpl implements IdentityService {
 
+    public static final String FAILED = "failed";
+    public static final String USER_NOT_FOUND = "User not found";
+    public static final String SUCCESS = "success";
+    public static final String USER_NOT_FOUND_WITH_ID = "user not found with id: ";
+    public static final String AUTHENTICATION = "authentication - > ";
     private final DataValidator dataValidator;
     private final UserMapper userMapper;
     private final NotificationAdaptor notificationAdaptor;
@@ -58,566 +60,301 @@ public class IdentityServiceImpl implements IdentityService {
     private final MediaFileRepository mediafileRepository;
     private final CommunicationPreferenceRepository communicationPreferenceRepository;
 
-//    private final CustomerRepository customerRepository;
-//    private final AuthenticationDetailsRepository authenticationDetailsRepository;
-//    private final CustomerAddressRepository customerAddressRepository;
-//    private final AccountVerificationTrackerRepository accountVerificationTrackerRepository;
-//    private final GarageRepository garageRepository;
-//    private final GarageAddressRepository garageAddressRepository;
-//    private final GaragePendingActionsRepository garagePendingActionsRepository;
-//    private final GarageSubscriptionRepository garageSubscriptionRepository;
-//    private final GarageTechnicianRepository garageTechnicianRepository;
-//    @Value("${authentication.encrypt.secret}")
-//    private String encryptSecret;
-//    @Value("${auth.service.email.confirm.url}")
-//    private String emailVerifyUrl;
-
 
     @Override
     public GenericResponse registerUserDetails(UserRegisterRequest request) {
-        String mobileNumber = "+971" + request.getMobileNumber ( );
-        request.setMobileNumber ( mobileNumber );
-        boolean userExists = dataValidator.checkUserAlreadyExists ( mobileNumber, request.getEmailId ( ) );
-        if ( userExists ) {
-            if ( ! dataValidator.checkUserIsVerified ( request.getMobileNumber ( ) ) ) {
-                notificationAdaptor.callSMSServiceToSendOtp ( request.getMobileNumber ( ) );
-                return new GenericResponse ( "success", "200", "Otp sent successfully", null );
+        String mobileNumber = "+971" + request.getMobileNumber();
+        request.setMobileNumber(mobileNumber);
+        boolean userExists = dataValidator.checkUserAlreadyExists(mobileNumber, request.getEmailId());
+        if (userExists) {
+            if (!dataValidator.checkUserIsVerified(request.getMobileNumber())) {
+                try {
+                    notificationAdaptor.callSMSServiceToSendOtp(request.getMobileNumber());
+                    return new GenericResponse(SUCCESS, "200", "Otp sent successfully", null);
+                } catch (OtpNotSentException e) {
+                    log.error("Failed to send OTP after retries for existing user: " + e.getMessage());
+                    return new GenericResponse(FAILED, "503", "User already exist", null);
+                } catch (Exception e) {
+                    log.error("Unexpected error sending OTP for existing user: " + e.getMessage(), e);
+                    return new GenericResponse(FAILED, "500", "Failed to send OTP. Please contact support.", null);
+                }
             }
-            throw new MemberAlreadyPresentException ( "user already exists" );
+            throw new MemberAlreadyPresentException("user already exists");
         }
-        User user = userMapper.tranformUserRequestToUser ( request );
-        user.setPassword ( passwordEncoder.encode ( request.getPassword ( ) ) );
-        Set<Role> roles = new HashSet<> ( );
-        Role userRole = roleRepository.findByName ( ERole.CUSTOMER )
-                .orElseThrow ( () -> new RuntimeException ( "Error: Role is not found." ) );
-        roles.add ( userRole );
-        user.setRoles ( roles );
-        user = userRepository.save ( user );
-        return notificationAdaptor.callSMSServiceToSendOtp ( user.getMobileNumber ( ) );
+        User user = userMapper.tranformUserRequestToUser(request);
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        Set<Role> roles = new HashSet<>();
+        Role userRole = roleRepository.findByName(ERole.CUSTOMER)
+                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+        roles.add(userRole);
+        user.setRoles(roles);
+        user = userRepository.save(user);
+
+        // Try to send OTP, but don't fail registration if SMS service is down
+        try {
+            return notificationAdaptor.callSMSServiceToSendOtp(user.getMobileNumber());
+        } catch (OtpNotSentException e) {
+            log.error("Failed to send OTP after retries for user registration: " + e.getMessage());
+            return new GenericResponse(FAILED, "503",
+                    "Registration successful but OTP service unavailable. Please use resend OTP.",
+                    null);
+        } catch (Exception e) {
+            log.error("Unexpected error sending OTP: " + e.getMessage(), e);
+            return new GenericResponse(FAILED, "500",
+                    "Registration successful but failed to send OTP. Please contact support.",
+                    null);
+        }
     }
 
     @Override
     @Transactional
     public GenericResponse verifyOtp(VerifyOtpRequest request) {
-        request.setMobileNumber ( "+971" + request.getMobileNumber ( ) );
-        AtomicReference<String> userId = new AtomicReference<> ( "" );
-        boolean isVerified = notificationAdaptor.verifyOtp ( request );
-        if ( isVerified ) {
-            userRepository.findByMobileNumber ( request.getMobileNumber ( ) )
-                    .ifPresent ( user -> {
-                        user.setIsVerified ( true );
-                        User savedUser = userRepository.save ( user );
-                        userId.set ( savedUser.getId ().toString () );
+        request.setMobileNumber("+971" + request.getMobileNumber());
+        AtomicReference<String> userId = new AtomicReference<>("");
+        boolean isVerified = notificationAdaptor.verifyOtp(request);
+        if (isVerified) {
+            userRepository.findByMobileNumber(request.getMobileNumber())
+                    .ifPresent(user -> {
+                        user.setIsVerified(true);
+                        User savedUser = userRepository.save(user);
+                        userId.set(savedUser.getId().toString());
 
                         // Create default communication preferences if they don't exist
-                        createDefaultCommunicationPreferences ( savedUser );
-                    } )
+                        createDefaultCommunicationPreferences(savedUser);
+                    })
             ;
-            return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "otp verified Your auto adda id is "+userId ).build ( );
+            return GenericResponse.builder().status(SUCCESS).code("200").message("otp verified Your auto adda id is " + userId).build();
         } else {
-            return GenericResponse.builder ( ).status ( "failed" ).code ( "500" ).message ( "invalid otp" ).build ( );
+            return GenericResponse.builder().status(FAILED).code("500").message("invalid otp").build();
         }
     }
 
 
     @Override
     public GenericResponse signIn(SignInRequest loginRequest) {
-        log.info ( "request -1> " + loginRequest.getMobileNumber ( ) + "   " + loginRequest.getPassword ( ) );
-        log.info ( "request -2> " + loginRequest.getEmail ( ) + "   " + loginRequest.getPassword ( ) );
+        log.info("request -1> " + loginRequest.getMobileNumber() + "   " + loginRequest.getPassword());
+        log.info("request -2> " + loginRequest.getEmail() + "   " + loginRequest.getPassword());
         User user = null;
-        if ( loginRequest.getMobileNumber ( ) != null && ! loginRequest.getMobileNumber ( ).isEmpty ( ) ) {
-            loginRequest.setMobileNumber ( "+971" + loginRequest.getMobileNumber ( ) );
-            user = userRepository.findByMobileNumberAndIsVerified ( loginRequest.getMobileNumber ( ) ).orElseThrow ( () ->
-                    new UsernameNotFoundException ( " User not found with phone number: " + loginRequest.getMobileNumber ( ) ) );
-        } else if ( loginRequest.getEmail ( ) != null && ! loginRequest.getEmail ( ).isEmpty ( ) ) {
-            user = userRepository.findByEmailAndIsVerified ( loginRequest.getEmail ( ) ).orElseThrow ( () ->
-                    new UsernameNotFoundException ( "user not found with email: " + loginRequest.getEmail ( ) ) );
+        if (loginRequest.getMobileNumber() != null && !loginRequest.getMobileNumber().isEmpty()) {
+            loginRequest.setMobileNumber("+971" + loginRequest.getMobileNumber());
+            user = userRepository.findByMobileNumberAndIsVerified(loginRequest.getMobileNumber()).orElseThrow(() ->
+                    new UsernameNotFoundException(" User not found with phone number: " + loginRequest.getMobileNumber()));
+        } else if (loginRequest.getEmail() != null && !loginRequest.getEmail().isEmpty()) {
+            user = userRepository.findByEmailAndIsVerified(loginRequest.getEmail()).orElseThrow(() ->
+                    new UsernameNotFoundException("user not found with email: " + loginRequest.getEmail()));
         }
-        Authentication authentication = authenticationManager.authenticate (
-                new UsernamePasswordAuthenticationToken ( user.getMobileNumber ( ), loginRequest.getPassword ( ) )
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(user.getMobileNumber(), loginRequest.getPassword())
         );
         // 2. Set authentication in security context
-        SecurityContextHolder.getContext ( ).setAuthentication ( authentication );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
         // 3. Generate JWT token
-        UserSecurityDetails userDetails = (UserSecurityDetails) authentication.getPrincipal ( );
-        String token = jwtUtil.generateAccessToken ( userDetails );
-        String refreshToken = refreshTokenService.generateRefreshToken ( user );
+        UserSecurityDetails userDetails = (UserSecurityDetails) authentication.getPrincipal();
+        String token = jwtUtil.generateAccessToken(userDetails);
+        String refreshToken = refreshTokenService.generateRefreshToken(user);
         // 4. Prepare success response
-        return GenericResponse.builder ( )
-                .status ( "success" )
-                .code ( "200" )
-                .message ( "Login successful" )
-                .body ( AuthResponse.builder ( )
-                        .accessToken ( token )
-                        .refreshToken ( refreshToken )
-                        .build ( ) )
-                .build ( );
+        return GenericResponse.builder()
+                .status(SUCCESS)
+                .code("200")
+                .message("Login successful")
+                .body(AuthResponse.builder()
+                        .accessToken(token)
+                        .refreshToken(refreshToken)
+                        .build())
+                .build();
     }
 
     @Override
     public GenericResponse getAccessTokenViaRefreshToken(String refreshToken) {
-        RefreshToken refreshToken1 = refreshTokenService.validateRefreshToken ( refreshToken );
-        String accessToken = jwtUtil.generateAccessToken ( new UserSecurityDetails ( refreshToken1.getUser ( ) ) );
-        return GenericResponse.builder ( )
-                .status ( "success" )
-                .code ( "200" )
-                .message ( "Access token generated successfully" )
-                .body ( new AuthResponse ( accessToken, refreshToken ) )
-                .build ( );
+        RefreshToken refreshToken1 = refreshTokenService.validateRefreshToken(refreshToken);
+        String accessToken = jwtUtil.generateAccessToken(new UserSecurityDetails(refreshToken1.getUser()));
+        return GenericResponse.builder()
+                .status(SUCCESS)
+                .code("200")
+                .message("Access token generated successfully")
+                .body(new AuthResponse(accessToken, refreshToken))
+                .build();
     }
 
     @Override
     public GenericResponse resendOtp(String request) {
-        return notificationAdaptor.callSMSServiceToSendOtp ( request );
+        return notificationAdaptor.callSMSServiceToSendOtp(request);
     }
 
     @Override
     public GenericResponse forgotPassword(String phoneNumber) {
-        User user = dataValidator.checkUserExistWithPhoneNumber ( phoneNumber ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with phone Number" ) );
-        GenericResponse genericResponse = notificationAdaptor.callSMSServiceToSendOtp ( user.getMobileNumber ( ) );
-        genericResponse.setMessage ( "Otp sent successfully for reset password" );
+        User user = dataValidator.checkUserExistWithPhoneNumber(phoneNumber).orElseThrow(() -> new ResourceNotFoundException("user not found with phone Number"));
+        GenericResponse genericResponse = notificationAdaptor.callSMSServiceToSendOtp(user.getMobileNumber());
+        genericResponse.setMessage("Otp sent successfully for reset password");
         return genericResponse;
     }
 
     @Override
     public GenericResponse logout(String autoAddaId) {
-        Integer currentUserId = Integer.parseInt ( autoAddaId );
-        return refreshTokenService.deleteRefreshTokenByUserId ( currentUserId );
+        Integer currentUserId = Integer.parseInt(autoAddaId);
+        return refreshTokenService.deleteRefreshTokenByUserId(currentUserId);
 
     }
 
 
     @Override
     public GenericResponse resetPassword(ResetPasswordRequest request) {
-        log.info ( getCurrentUserId ( ).toString ( ) );
-        Integer currentUserId = getCurrentUserId ( );
-        User user = userRepository.findById ( currentUserId ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with phoneNumber" ) );
-        user.setPassword ( passwordEncoder.encode ( request.getPassword ( ) ) );
-        userRepository.save ( user );
-        return new GenericResponse ( "success", "200", "Password reset successfully", null );
+        log.info(getCurrentUserId().toString());
+        Integer currentUserId = getCurrentUserId();
+        User user = userRepository.findById(currentUserId).orElseThrow(() -> new ResourceNotFoundException("user not found with phoneNumber"));
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        userRepository.save(user);
+        return new GenericResponse(SUCCESS, "200", "Password reset successfully", null);
     }
 
     @Override
     public GenericResponse verifyResetPasswordOtp(VerifyOtpRequest request) {
-        request.setMobileNumber ( "+971" + request.getMobileNumber ( ) );
-        boolean b = notificationAdaptor.verifyOtp ( request );
-        if ( b ) {
-            User user = userRepository.findByMobileNumber ( request.getMobileNumber ( ) ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with mobile number" ) );
-            String tempAccessToken = jwtUtil.generateAccessToken ( new UserSecurityDetails ( user ), 300000 );// 5 minutes
-            return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).body ( tempAccessToken ).message ( "otp verified successfully" ).build ( );
+        request.setMobileNumber("+971" + request.getMobileNumber());
+        boolean b = notificationAdaptor.verifyOtp(request);
+        if (b) {
+            User user = userRepository.findByMobileNumber(request.getMobileNumber()).orElseThrow(() -> new ResourceNotFoundException("user not found with mobile number"));
+            String tempAccessToken = jwtUtil.generateAccessToken(new UserSecurityDetails(user), 300000);// 5 minutes
+            return GenericResponse.builder().status(SUCCESS).code("200").body(tempAccessToken).message("otp verified successfully").build();
         } else {
-            return GenericResponse.builder ( ).status ( "failed" ).code ( "500" ).message ( "invalid otp" ).build ( );
+            return GenericResponse.builder().status(FAILED).code("500").message("invalid otp").build();
         }
     }
 
     @Override
     public UserResponse getUser(Integer id) {
-        return userRepository.findById ( id ).map ( user -> {
-            return UserResponse.builder ( )
-                    .id ( user.getId ( ) )
-                    .name ( user.getFirstName ( ).concat ( " " + user.getLastName ( ) ) )
-                    .email ( user.getEmail ( ) )
-                    .mobileNumber ( user.getMobileNumber ( ) )
-                    .isVerified ( user.getIsVerified ( ) )
-                    .profileImage ( user.getProfileImage ().isEmpty ()? null : user.getProfileImage ().get(0) )
-                    .build ( );
-        } ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with id: " + id ) );
+        return userRepository.findById(id).map(user -> {
+            return UserResponse.builder()
+                    .id(user.getId())
+                    .name(user.getFirstName().concat(" " + user.getLastName()))
+                    .email(user.getEmail())
+                    .mobileNumber(user.getMobileNumber())
+                    .isVerified(user.getIsVerified())
+                    .profileImage(user.getProfileImage().isEmpty() ? null : user.getProfileImage().get(0))
+                    .build();
+        }).orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_WITH_ID + id));
     }
 
 
     public Integer getCurrentUserId() {
-        Authentication authentication = SecurityContextHolder.getContext ( ).getAuthentication ( );
-        log.info ( "authentication - > " + authentication );
-        if ( authentication == null || ! authentication.isAuthenticated ( ) ) {
-            throw new JwtException ( "User not authenticated" );
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        log.info(AUTHENTICATION + authentication);
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new JwtException("User not authenticated");
         }
-        if ( authentication.getPrincipal ( ) instanceof UserSecurityDetails ) {
-            UserSecurityDetails userDetails = (UserSecurityDetails) authentication.getPrincipal ( );
-            return userDetails.getUser ( ).getId ( );
+        if (authentication.getPrincipal() instanceof UserSecurityDetails) {
+            UserSecurityDetails userDetails = (UserSecurityDetails) authentication.getPrincipal();
+            return userDetails.getUser().getId();
         }
-        log.info ( "authentication - > " + authentication.getName ( ) );
-        String number = authentication.getName ( );
-        return userRepository.findByMobileNumber ( number )
-                .map ( User::getId )
-                .orElseThrow ( () -> new JwtException ( "User not found" ) );
+        log.info(AUTHENTICATION + authentication.getName());
+        String number = authentication.getName();
+        return userRepository.findByMobileNumber(number)
+                .map(User::getId)
+                .orElseThrow(() -> new JwtException(USER_NOT_FOUND));
     }
 
     @Override
     public User getCurrentUser() {
-        Authentication authentication = SecurityContextHolder.getContext ( ).getAuthentication ( );
-        log.info ( "authentication - > " + authentication );
-        if ( authentication == null || ! authentication.isAuthenticated ( ) ) {
-            throw new JwtException ( "User not authenticated" );
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        log.info(AUTHENTICATION + authentication);
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new JwtException("User not authenticated");
         }
-        if ( authentication.getPrincipal ( ) instanceof UserSecurityDetails ) {
-            UserSecurityDetails userDetails = (UserSecurityDetails) authentication.getPrincipal ( );
-            return userDetails.getUser ( );
+        if (authentication.getPrincipal() instanceof UserSecurityDetails) {
+            UserSecurityDetails userDetails = (UserSecurityDetails) authentication.getPrincipal();
+            return userDetails.getUser();
         }
-        log.info ( "authentication - > " + authentication.getName ( ) );
-        String number = authentication.getName ( );
-        return userRepository.findByMobileNumber ( number )
-                .orElseThrow ( () -> new JwtException ( "User not found" ) );
+        log.info(AUTHENTICATION + authentication.getName());
+        String number = authentication.getName();
+        return userRepository.findByMobileNumber(number)
+                .orElseThrow(() -> new JwtException(USER_NOT_FOUND));
     }
 
     @Override
     public GenericResponse updateRole(Integer id, ERole role) {
-        Role role1 = roleRepository.findByName ( role ).orElseThrow ( () -> new ResourceNotFoundException ( "role not found with name: " + role ) );
-        User user = userRepository.findById ( id ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with id: " + id ) );
-        Set<Role> roles = user.getRoles ( );
-        roles.add ( role1 );
-        user.setRoles ( roles );
-        User save = userRepository.save ( user );
-        return GenericResponse.builder ( )
-                .status ( "success" )
-                .code ( "200" )
-                .message ( "role added successfully" )
-                .body ( save.getRoles () )
-                .build ( );
+        Role role1 = roleRepository.findByName(role).orElseThrow(() -> new ResourceNotFoundException("role not found with name: " + role));
+        User user = userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_WITH_ID + id));
+        Set<Role> roles = user.getRoles();
+        roles.add(role1);
+        user.setRoles(roles);
+        User save = userRepository.save(user);
+        return GenericResponse.builder()
+                .status(SUCCESS)
+                .code("200")
+                .message("role added successfully")
+                .body(save.getRoles())
+                .build();
     }
 
     @Override
     public GenericResponse removeRole(Integer id, ERole role) {
-        Role role1 = roleRepository.findByName ( role ).orElseThrow ( () -> new ResourceNotFoundException ( "role not found with name: " + role ) );
-        User user = userRepository.findById ( id ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with id: " + id ) );
-        Set<Role> roles = user.getRoles ( );
-        roles.remove ( role1 );
-        user.setRoles ( roles );
-        User save = userRepository.save ( user );
-        return GenericResponse.builder ( )
-                .status ( "success" )
-                .code ( "200" )
-                .message ( "role added successfully" )
-                .body ( save.getRoles () )
-                .build ( );
+        Role role1 = roleRepository.findByName(role).orElseThrow(() -> new ResourceNotFoundException("role not found with name: " + role));
+        User user = userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_WITH_ID + id));
+        Set<Role> roles = user.getRoles();
+        roles.remove(role1);
+        user.setRoles(roles);
+        User save = userRepository.save(user);
+        return GenericResponse.builder()
+                .status(SUCCESS)
+                .code("200")
+                .message("role added successfully")
+                .body(save.getRoles())
+                .build();
     }
 
     @Override
     public UserResponse getUserDetailByPhoneNumber(String mobileNumber) {
-        User user = userRepository.findByMobileNumber ( mobileNumber ).orElseThrow ( () -> new ResourceNotFoundException ( "user not found with mobile number: " + mobileNumber ) );
-        return UserResponse.builder ( )
-                .id ( user.getId ( ) )
-                .name ( user.getFirstName ( ).concat ( " " + user.getLastName ( ) ) )
-                .email ( user.getEmail ( ) )
-                .mobileNumber ( user.getMobileNumber ( ) )
-                .profileImage ( user.getProfileImage ().isEmpty ()? null : user.getProfileImage ().get(0) )
-                .isVerified ( user.getIsVerified ( ) )
-                .build ( );
+        User user = userRepository.findByMobileNumber(mobileNumber).orElseThrow(() -> new ResourceNotFoundException("user not found with mobile number: " + mobileNumber));
+        return UserResponse.builder()
+                .id(user.getId())
+                .name(user.getFirstName().concat(" " + user.getLastName()))
+                .email(user.getEmail())
+                .mobileNumber(user.getMobileNumber())
+                .profileImage(user.getProfileImage().isEmpty() ? null : user.getProfileImage().get(0))
+                .isVerified(user.getIsVerified())
+                .build();
     }
 
     @Override
     @Transactional
     public GenericResponse updateUserProfile(UserUpdateRequest request) {
         // Fetch fresh User from database to avoid LazyInitializationException
-        Integer userId = getCurrentUserId ( );
-        User currentUser = userRepository.findById ( userId )
-                .orElseThrow ( () -> new ResourceNotFoundException ( "User not found" ) );
+        Integer userId = getCurrentUserId();
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND));
 
-        if(request.getFirstName ()!=null){
-            currentUser.setFirstName ( request.getFirstName ( ) );
+        if (request.getFirstName() != null) {
+            currentUser.setFirstName(request.getFirstName());
         }
-        if(request.getLastName ()!=null){
-            currentUser.setLastName ( request.getLastName ( ) );
+        if (request.getLastName() != null) {
+            currentUser.setLastName(request.getLastName());
         }
-        if(request.getProfileImageId ()!=null){
-            MediaFile profile = mediafileRepository.findById ( request.getProfileImageId ( ) ).orElseThrow ( () -> new ResourceNotFoundException ( "image not found" ) );
-            currentUser.getProfileImage ().clear ();
-            currentUser.getProfileImage ().add (profile);
+        if (request.getProfileImageId() != null) {
+            MediaFile profile = mediafileRepository.findById(request.getProfileImageId()).orElseThrow(() -> new ResourceNotFoundException("image not found"));
+            currentUser.getProfileImage().clear();
+            currentUser.getProfileImage().add(profile);
         }
-        User user = userRepository.save ( currentUser );
+        User user = userRepository.save(currentUser);
 
-        UserResponse userResponse = UserResponse.builder ( )
-                .id ( user.getId ( ) )
-                .name ( user.getFirstName ( ).concat ( " " + user.getLastName ( ) ) )
-                .email ( user.getEmail ( ) )
-                .mobileNumber ( user.getMobileNumber ( ) )
-                .isVerified ( user.getIsVerified ( ) )
-                .profileImage ( user.getProfileImage ().isEmpty ()? null : user.getProfileImage ().get(0) )
-                .build ( );
+        UserResponse userResponse = UserResponse.builder()
+                .id(user.getId())
+                .name(user.getFirstName().concat(" " + user.getLastName()))
+                .email(user.getEmail())
+                .mobileNumber(user.getMobileNumber())
+                .isVerified(user.getIsVerified())
+                .profileImage(user.getProfileImage().isEmpty() ? null : user.getProfileImage().get(0))
+                .build();
 
         return GenericResponse
-                .builder ( )
-                .status ( "success" )
-                .code ( "200" )
-                .body ( userResponse )
-                .build ( );
+                .builder()
+                .status(SUCCESS)
+                .code("200")
+                .body(userResponse)
+                .build();
     }
-//    @Override
-//    public Customer createCustomerDetails(Customer customer) {
-//        Customer savedCustomer = customerRepository.save ( customer );
-//        return savedCustomer;
-//    }
-
-//    @Override
-//    public String encryptString(String inputString) {
-//        return AESUtil.encrypt ( inputString, "secret" );
-//    }
-//
-//    @Override
-//    public String decryptString(String inputString) {
-//        return AESUtil.decrypt ( inputString, "secret" );
-//    }
-
-//    @Override
-//    public GenericResponse registerCustomerDetails(CustomerRegisterRequest request) throws MemberAlreadyExistException {
-//        try {
-//            //username validation
-//            log.info ( "Performing input validations" );
-//            platformDataValidator.validateUsername ( request.getEmailId ( ) );
-//            //save customer
-//            Customer customer = platformObjectTransformer.transformRegisterRequestToCustomer ( request );
-//            customerRepository.save ( customer );
-//            log.info ( "customer saved successfully" );
-//            //save address
-//            CustomerAddress address = platformObjectTransformer.transformRegisterRequestToCustomerAddress ( request, customer );
-//            customerAddressRepository.save ( address );
-//            log.info ( "customer address saved" );
-//            //save auth
-//            String encryptedPwd = AESUtil.encrypt ( request.getPassword ( ), encryptSecret );
-//            AuthenticationDetails authData = platformObjectTransformer.transformToAuthenticationDetails ( request, customer, encryptedPwd );
-//            authenticationDetailsRepository.save ( authData );
-//            log.info ( "Authentication details saved" );
-//            //send verify email
-//            updateAndsendEmailverificationEmail ( customer.getEmailId ( ), customer.getId ( ), customer.getCustomerType ( ) );
-//            log.info ( "Triggered verification email to the registered customer" );
-//            //return response
-//            return GenericResponse.builder ( ).status ( "success" ).code ( "201" ).message ( "customer created" ).body ( customer ).build ( );
-//        }
-//        catch ( MemberAlreadyExistException exc ) {
-//            throw exc;
-//        }
-//        catch ( Exception e ) {
-//            log.error ( "ERROR while customer register..!" + e.getMessage ( ) );
-//        }
-//        return GenericResponse.builder ( ).status ( "failed" ).code ( "" ).message ( "Issue while creating customer registration" ).build ( );
-//    }
-
-//    private void updateAndsendEmailverificationEmail(String emailId, Integer memberId, String memberType) {
-//        try {
-//            String token = UUID.randomUUID ( ).toString ( );
-//            String verificationUrl = emailVerifyUrl + "?token=" + token;
-//            NotificationRequest emailRequest = prepareVerificationEmailRequest ( memberId, memberType, 0, emailId, verificationUrl );
-//            GenericResponse response = notificationAdaptor.callNotificationService ( emailRequest );
-//            if ( response.getStatus ( ).equals ( "success" ) ) {
-//                AccountVerificationTracker verifyTracker = platformObjectTransformer.prepareAccountVerificationTracker ( memberId, memberType, token );
-//                accountVerificationTrackerRepository.save ( verifyTracker );
-//            }
-//            log.info ( "Triggering email through SMTP successful" );
-//        }
-//        catch ( Exception e ) {
-//            e.printStackTrace ( );
-//            log.error ( "ERROR while sending the verification email" + memberId );
-//        }
-//    }
-//
-
-//    private NotificationRequest prepareVerificationEmailRequest(Integer memberId, String memberType, int templateId, String emailId,
-//                                                                String verificationUrl) {
-//        return NotificationRequest.builder ( )
-//                .memberId ( memberId )
-//                .memberType ( memberType )
-//                .templateId ( templateId )
-//                .verifyUrl ( verificationUrl )
-//                .toEmailId ( emailId )
-//                .build ( );
-//    }
-
-//    @Override
-//    public GenericResponse verifyEmailAddress(String token) {
-//        try {
-//            AccountVerificationTracker tracker = accountVerificationTrackerRepository.findByToken ( token );
-//            if ( null == tracker ) {
-//                log.info ( "Unable to find token" );
-//                return GenericResponse.builder ( ).status ( "failed" ).code ( "500" ).message ( "Token not found" ).build ( );
-//            }
-//            if ( tracker.getStatus ( ).equals ( "VERIFIED" ) ) {
-//                log.info ( "Token already verified" );
-//                return GenericResponse.builder ( ).status ( "failed" ).code ( "500" ).message ( "Token already verified" ).build ( );
-//            }
-//            if ( tracker.getVerifyEndDate ( ).before ( DateHelper.dbTimeStampp ( ) ) ) {
-//                log.info ( "Token Expired" );
-//                return GenericResponse.builder ( ).status ( "failed" ).code ( "500" ).message ( "Token expired" ).build ( );
-//            }
-//            tracker.setStatus ( "VERIFIED" );
-//            tracker.setVerifiedDate ( DateHelper.dbTimeStampp ( ) );
-//            accountVerificationTrackerRepository.save ( tracker );
-//
-//            log.info ( "Token successfully verified" );
-//            if ( tracker.getMemberType ( ).equals ( "CUSTOMER" ) || tracker.getMemberType ( ).equals ( "CORPORATE" ) ) {
-//                Optional<Customer> optCust = customerRepository.findById ( tracker.getMemberId ( ) );
-//                Customer customer = optCust.get ( );
-//                customer.setAccountStatus ( "ACTIVE" );
-//                customerRepository.save ( customer );
-//                log.info ( "customer successfully activated" );
-//            }
-//
-//            if ( tracker.getMemberType ( ).equals ( Constants.GARAGE ) ) {
-//                GaragePendingActions pendingAction = garagePendingActionsRepository.findByGarageId ( tracker.getMemberId ( ) );
-//                pendingAction.setEmailVerifyInd ( "Y" );
-//                garagePendingActionsRepository.save ( pendingAction );
-//                log.info ( "Garage email successfully verified" );
-//            }
-//
-//            if ( tracker.getMemberType ( ).equals ( Constants.GARAGE_TECH ) ) {
-//                Optional<GarageTechnicians> optTech = garageTechnicianRepository.findById ( tracker.getMemberId ( ) );
-//                GarageTechnicians technician = optTech.get ( );
-//                technician.setAccountStatus ( "ACTIVE" );
-//                garageTechnicianRepository.save ( technician );
-//                log.info ( "Garage technician email/account successfully verified/activated" );
-//            }
-//            return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "Token verified" ).build ( );
-//        }
-//        catch ( Exception e ) {
-//            e.printStackTrace ( );
-//        }
-//        return null;
-//    }
-
-//    @Override
-//    public GenericResponse sendVerifyEmail(SendVerifyEmailRequest request) {
-//        updateAndsendEmailverificationEmail ( request.getEmailId ( ), request.getCustomerId ( ), request.getCustomerType ( ) );
-//        return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "Verify email sent" ).build ( );
-//    }
-
-//    @Override
-//    public GenericResponse registerGarageDetails(GarageRegisterRequest request) throws MemberAlreadyExistException {
-//        try {
-//            //username validation
-//            log.info ( "perform garage signup input validation" );
-//            platformDataValidator.validateUsername ( request.getEmailId ( ) );
-//            //registering garage with all required details
-//            Garage garageDetails = registerGarageWithRequiredDetails ( request );
-//            //send verify email
-//            updateAndsendEmailverificationEmail ( garageDetails.getEmailId ( ), garageDetails.getId ( ), Constants.GARAGE );
-//            //return response
-//            log.info ( "verification email triggered to registered email" );
-//            return GenericResponse.builder ( ).status ( "success" ).code ( "201" ).message ( "Garage registered" ).body ( garageDetails ).build ( );
-//        }
-//        catch ( MemberAlreadyExistException exc ) {
-//            throw exc;
-//        }
-//        catch ( Exception e ) {
-//            log.error ( "ERROR while garage register..!" + e.getMessage ( ) );
-//        }
-//        return GenericResponse.builder ( ).status ( "failed" ).code ( "" ).message ( "Issue while creating garage registration" ).build ( );
-//    }
-
-//    private Garage registerGarageWithRequiredDetails(GarageRegisterRequest request) {
-//        //save Service center
-//        Garage garageDetails = platformObjectTransformer.transformRegisterRequestToGarage ( request );
-//        garageRepository.save ( garageDetails );
-//        log.info ( "garage details saved" );
-//        //save address
-//        GarageAddress address = platformObjectTransformer.transformRegisterRequestToGarageAddress ( request, garageDetails );
-//        garageAddressRepository.save ( address );
-//        log.info ( "garage address saved" );
-//        //save auth
-//        String encryptedPwd = AESUtil.encrypt ( request.getPassword ( ), encryptSecret );
-//        AuthenticationDetails authData = platformObjectTransformer.transformGarageToAuthenticationDetails ( request, garageDetails, encryptedPwd );
-//        authenticationDetailsRepository.save ( authData );
-//        log.info ( "Auth details saved" );
-//        //save default pending actions
-//        GaragePendingActions pendingActions = platformObjectTransformer.transformGarageToPendingActions ( request, garageDetails );
-//        garagePendingActionsRepository.save ( pendingActions );
-//        log.info ( "Pending actions saved" );
-//        return garageDetails;
-//    }
-
-//    @Override
-//    public GenericResponse genericSignIn(SignInRequest request) throws MemberNotExistException, InvalidLoginException {
-//        try {
-//            //check username existance
-//            platformDataValidator.checkUsernameExist ( request.getUsername ( ) );
-//
-//            AuthenticationDetails authDetails = authenticationDetailsRepository.findByUserName ( request.getUsername ( ) );
-//
-//            String decryptedPwd = AESUtil.decrypt ( authDetails.getEncryptedPassword ( ), encryptSecret );
-//
-//            if ( ! authDetails.getUserName ( ).equalsIgnoreCase ( request.getUsername ( ) ) || ! decryptedPwd.equals ( request.getPassword ( ) ) ) {
-//                log.error ( "Invalid username/password" );
-//                throw new InvalidLoginException ( "Invalid username/password" );
-//            }
-//
-//            if ( authDetails.getMemberType ( ).equals ( Constants.CUSTOMER ) ) {
-//                log.info ( "Login successfull" );
-//                if ( isEmailVerificationCompleted ( authDetails ) ) {
-//                    Customer customerDetails = customerRepository.findById ( authDetails.getMemberId ( ) ).get ( );
-//                    return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "login successfull" ).body ( customerDetails ).build ( );
-//                }
-//                return GenericResponse.builder ( ).status ( "failed" ).code ( "200" ).message ( "Email not verified, plese verify" ).body ( null ).build ( );
-//            }
-//
-//            if ( authDetails.getMemberType ( ).equals ( Constants.GARAGE_TECH ) ) {
-//                log.info ( "Login successfully" );
-//                if ( isEmailVerificationCompleted ( authDetails ) ) {
-//                    GarageTechnicians technicianDetails = garageTechnicianRepository.findById ( authDetails.getMemberId ( ) ).get ( );
-//                    return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "login successfull" ).body ( technicianDetails ).build ( );
-//                }
-//                return GenericResponse.builder ( ).status ( "failed" ).code ( "200" ).message ( "Email not verified, plese verify" ).body ( null ).build ( );
-//            }
-//
-//            if ( authDetails.getMemberType ( ).equals ( Constants.GARAGE ) ) {
-//                log.info ( "Login successfully" );
-//                if ( isEmailVerificationCompleted ( authDetails ) ) {
-//                    Garage garageDetails = garageRepository.findById ( authDetails.getMemberId ( ) ).get ( );
-//                    GarageAddress address = garageAddressRepository.findByGarageId ( garageDetails.getId ( ) );
-//                    GarageSubscription subscription = garageSubscriptionRepository.findByGarageId ( garageDetails.getId ( ) );
-//                    GaragePendingActions pendingActions = garagePendingActionsRepository.findByGarageId ( garageDetails.getId ( ) );
-//                    return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "login successfull" )
-//                            .body ( GarageLoginResponse.builder ( )
-//                                    .garageDetails ( garageDetails )
-//                                    .address ( address )
-//                                    .subscription ( subscription )
-//                                    .pendingActions ( pendingActions ).build ( ) )
-//                            .build ( );
-//                }
-//                return GenericResponse.builder ( ).status ( "failed" ).code ( "200" ).message ( "Email not verified, plese verify" ).body ( null ).build ( );
-//            }
-//        }
-//        catch ( MemberNotExistException e ) {
-//            throw e;
-//        }
-//        catch ( InvalidLoginException exc ) {
-//            throw exc;
-//        }
-//        catch ( Exception e ) {
-//            log.error ( "ERROR while customer register..!" + e.getMessage ( ) );
-//        }
-//        return GenericResponse.builder ( ).status ( "failed" ).code ( "" ).message ( "Issue while login" ).build ( );
-//    }
-
-//    private boolean isEmailVerificationCompleted(AuthenticationDetails authDetails) {
-//        AccountVerificationTracker verifyRecord = accountVerificationTrackerRepository.findByMemberIdAndMemberTypeAndStatus ( authDetails.getMemberId ( ), authDetails.getMemberType ( ), "VERIFIED" );
-//        return verifyRecord != null ? true : false;
-//    }
-
-//    @Override
-//    public GenericResponse updateMemberPassword(UpdatePasswordRequest request) throws MemberNotExistException {
-//        try {
-//            //check auth existance
-//            platformDataValidator.validateAuthenticationDetails ( request.getMemberId ( ), request.getMemberType ( ) );
-//            if ( ! request.getPassword ( ).equals ( request.getConfirmPassword ( ) ) ) {
-//                return GenericResponse.builder ( ).status ( "failed" ).code ( "" ).message ( "Password/Confirm password not matched" ).build ( );
-//            }
-//            AuthenticationDetails authDetails = authenticationDetailsRepository.findByMemberIdAndMemberType ( request.getMemberId ( ), request.getMemberType ( ) );
-//            String encryptedPassword = AESUtil.encrypt ( request.getPassword ( ), encryptSecret );
-//            authDetails.setCredType ( "PERM" );
-//            authDetails.setEncryptedPassword ( encryptedPassword );
-//            authDetails.setEffectiveDate ( DateHelper.dbTimeStampp ( ) );
-//            authDetails.setExpDate ( DateHelper.getDateWith90Days ( ) );
-//            authenticationDetailsRepository.save ( authDetails );
-//            return GenericResponse.builder ( ).status ( "success" ).code ( "200" ).message ( "Password updated successfully" ).body ( authDetails ).build ( );
-//        }
-//        catch ( MemberNotExistException e ) {
-//            throw e;
-//        }
-//        catch ( Exception e ) {
-//            log.error ( "ERROR while updating password..!" + e.getMessage ( ) );
-//        }
-//        return GenericResponse.builder ( ).status ( "failed" ).code ( "" ).message ( "Issue while login" ).build ( );
-//    }
 
     /**
      * Creates default communication preferences for a newly verified user
+     *
      * @param user The user for whom to create preferences
      */
     private void createDefaultCommunicationPreferences(User user) {

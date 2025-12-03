@@ -38,22 +38,4 @@ public interface IdentityService {
 
     GenericResponse updateUserProfile(UserUpdateRequest request);
 
-//	public Customer createCustomerDetails(Customer customer);
-
-//	public String encryptString(String inputString);
-
-//	public String decryptString(String inputString);
-
-//	public GenericResponse registerCustomerDetails(CustomerRegisterRequest request) throws MemberAlreadyExistException;
-
-//	public GenericResponse verifyEmailAddress(String token);
-
-//	public GenericResponse sendVerifyEmail(SendVerifyEmailRequest request);
-
-//	public GenericResponse registerGarageDetails(GarageRegisterRequest request) throws MemberAlreadyExistException;
-
-//	public GenericResponse genericSignIn(SignInRequest request) throws MemberNotExistException, InvalidLoginException;
-
-//	public GenericResponse updateMemberPassword(UpdatePasswordRequest request) throws MemberNotExistException;
-
 }

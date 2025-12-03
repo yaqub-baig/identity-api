@@ -1,10 +1,6 @@
 package com.autoadda.apis.identity.request;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
@@ -12,11 +8,11 @@ import lombok.Setter;
 @NoArgsConstructor
 @Builder
 public class NotificationRequest {
-	
-	private Integer memberId;
-	private String memberType;
-	private String toEmailId;
-	private Integer templateId;
-	private String verifyUrl;
+
+    private Integer memberId;
+    private String memberType;
+    private String toEmailId;
+    private Integer templateId;
+    private String verifyUrl;
 
 }

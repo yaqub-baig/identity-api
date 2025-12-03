@@ -5,18 +5,17 @@ package com.autoadda.apis.identity.exception;
  */
 public class InvalidLoginException extends Exception {
 
-	private String message;
 
-	public InvalidLoginException() {
-		super();
-	}
+    public InvalidLoginException() {
+        super();
+    }
 
-	public InvalidLoginException(String message) {
-		super(message);
-		this.message = message;
-	}
+    public InvalidLoginException(String message) {
+        super(message);
 
-	public InvalidLoginException(String message, Throwable cause) {
-		super(message, cause);
-	}
+    }
+
+    public InvalidLoginException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

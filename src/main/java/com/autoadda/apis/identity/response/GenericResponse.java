@@ -1,10 +1,6 @@
 package com.autoadda.apis.identity.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Builder
 @AllArgsConstructor
@@ -12,10 +8,10 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GenericResponse {
-	
-	private String status;
-	private String code;
-	private String message;
-	private Object body;
+
+    private String status;
+    private String code;
+    private String message;
+    private Object body;
 
 }

@@ -1263,9 +1263,9 @@ class PlatformAuthenticationServiceImplTest {
             user = createMockUser(); // Use default mock user if none provided
         }
         UserSecurityDetails userDetails = new UserSecurityDetails(user);
-        Authentication authentication = new UsernamePasswordAuthenticationToken(
+        Authentication authentication1 = new UsernamePasswordAuthenticationToken(
                 userDetails, null, userDetails.getAuthorities());
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        SecurityContextHolder.getContext().setAuthentication(authentication1);
 
         // Also mock the repository to return this user when queried by mobile number
         when(userRepository.findByMobileNumber(user.getMobileNumber()))

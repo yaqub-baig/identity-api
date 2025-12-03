@@ -23,14 +23,14 @@ public class DataInitializer implements CommandLineRunner {
         // Initialize roles if they don't exist
 
         if (roleRepository.findAll().isEmpty()) {
-            Arrays.stream ( ERole.values ( ) ).forEach ( role -> {
-                if ( ! roleRepository.existsByName ( role ) ) {
-                    Role newRole = new Role ( );
-                    newRole.setName ( role );
-                    roleRepository.save ( newRole );
-                    log.info ( "Initialized role: " + role );
+            Arrays.stream(ERole.values()).forEach(role -> {
+                if (!roleRepository.existsByName(role)) {
+                    Role newRole = new Role();
+                    newRole.setName(role);
+                    roleRepository.save(newRole);
+                    log.info("Initialized role: " + role.name());
                 }
-            } );
+            });
         }
     }
 }

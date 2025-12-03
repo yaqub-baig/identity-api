@@ -9,13 +9,13 @@ import org.springframework.stereotype.Component;
 public class UserMapper {
 
     public User tranformUserRequestToUser(UserRegisterRequest request) {
-		return User.builder ( )
-				.firstName ( request.getFirstName ( ) )
-				.lastName ( request.getLastName ( ) )
-				.email( request.getEmailId ( ) )
-				.mobileNumber ( request.getMobileNumber ( ) )
-				.isVerified ( false )
-				.build ( );
+        return User.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .email(request.getEmailId())
+                .mobileNumber(request.getMobileNumber())
+                .isVerified(false)
+                .build();
     }
 
 //	public Customer transformRegisterRequestToCustomer(CustomerRegisterRequest request) {

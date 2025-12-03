@@ -5,18 +5,17 @@ package com.autoadda.apis.identity.exception;
  */
 public class MemberNotExistException extends Exception {
 
-	private String message;
 
-	public MemberNotExistException() {
-		super();
-	}
+    public MemberNotExistException() {
+        super();
+    }
 
-	public MemberNotExistException(String message) {
-		super(message);
-		this.message = message;
-	}
+    public MemberNotExistException(String message) {
+        super(message);
 
-	public MemberNotExistException(String message, Throwable cause) {
-		super(message, cause);
-	}
+    }
+
+    public MemberNotExistException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

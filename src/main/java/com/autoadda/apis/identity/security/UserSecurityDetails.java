@@ -16,24 +16,24 @@ public class UserSecurityDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return user.getRoles ( ).stream ( )
-                .map ( role -> new SimpleGrantedAuthority ( "ROLE_" + role.getName () ) )
-                .collect ( Collectors.toSet ( ) );
+        return user.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))
+                .collect(Collectors.toSet());
     }
 
     @Override
     public String getPassword() {
-        return user.getPassword ( );
+        return user.getPassword();
     }
 
     @Override
     public String getUsername() {
-        return user.getMobileNumber ( );
+        return user.getMobileNumber();
     }
 
 
     public String getUserId() {
-        return user.getId ( ).toString ();
+        return user.getId().toString();
     }
 
     public User getUser() {

@@ -58,6 +58,7 @@ public class NotificationAdaptor {
 
     private String generateSecureOtp() {
         SecureRandom random = new SecureRandom();
+
         return String.valueOf(random.nextInt(900000) + 100000);
     }
 

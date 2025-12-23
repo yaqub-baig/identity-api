@@ -69,6 +69,26 @@ public class CommunicationPreferenceServiceImpl implements CommunicationPreferen
             log.debug("mapToEntity - Setting status: {}", preferenceRequest.getStatus());
             communicationPreference.setStatus(preferenceRequest.getStatus());
         }
+        if (preferenceRequest.getWebpushOnServiceUpdates() != null) {
+            log.debug("mapToEntity - Setting webpushOnServiceUpdates: {}", preferenceRequest.getWebpushOnServiceUpdates());
+            communicationPreference.setWebpushOnServiceUpdates(preferenceRequest.getWebpushOnServiceUpdates());
+        }
+        if (preferenceRequest.getWebpushOnAppointments() != null) {
+            log.debug("mapToEntity - Setting webpushOnAppointments: {}", preferenceRequest.getWebpushOnAppointments());
+            communicationPreference.setWebpushOnAppointments(preferenceRequest.getWebpushOnAppointments());
+        }
+        if (preferenceRequest.getWebpushOnReminders() != null) {
+            log.debug("mapToEntity - Setting webpushOnReminders: {}", preferenceRequest.getWebpushOnReminders());
+            communicationPreference.setWebpushOnReminders(preferenceRequest.getWebpushOnReminders());
+        }
+        if (preferenceRequest.getWebpushOnOffers() != null) {
+            log.debug("mapToEntity - Setting webpushOnOffers: {}", preferenceRequest.getWebpushOnOffers());
+            communicationPreference.setWebpushOnOffers(preferenceRequest.getWebpushOnOffers());
+        }
+        if (preferenceRequest.getWebpushOnQuotationRequests() != null) {
+            log.debug("mapToEntity - Setting webpushOnQuotationRequests: {}", preferenceRequest.getWebpushOnQuotationRequests());
+            communicationPreference.setWebpushOnQuotationRequests(preferenceRequest.getWebpushOnQuotationRequests());
+        }
 
         log.debug("mapToEntity - Mapped entity: {}", communicationPreference);
         return communicationPreference;

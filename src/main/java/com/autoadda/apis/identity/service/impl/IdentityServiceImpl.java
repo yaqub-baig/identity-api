@@ -17,6 +17,7 @@ import com.autoadda.apis.identity.response.UserResponse;
 import com.autoadda.apis.identity.security.JwtUtil;
 import com.autoadda.apis.identity.security.UserSecurityDetails;
 import com.autoadda.apis.identity.service.IdentityService;
+import com.autoadda.apis.identity.service.NotificationDispatcher;
 import com.autoadda.apis.identity.service.RefreshTokenService;
 import com.autoadda.apis.identity.util.ERole;
 import com.autoadda.apis.identity.util.Status;
@@ -59,6 +60,7 @@ public class IdentityServiceImpl implements IdentityService {
     private final RefreshTokenService refreshTokenService;
     private final MediaFileRepository mediafileRepository;
     private final CommunicationPreferenceRepository communicationPreferenceRepository;
+//    private final NotificationDispatcher notificationDispatcher;
 
 
     @Override
@@ -121,6 +123,21 @@ public class IdentityServiceImpl implements IdentityService {
 
                         // Create default communication preferences if they don't exist
                         createDefaultCommunicationPreferences(savedUser);
+
+                        // Send welcome push notification
+//                        try {
+//                            notificationDispatcher.notifyUser(
+//                                    savedUser.getId().toString(),
+//                                    "Welcome to AutoAdda!",
+//                                    "Your account is verified. Start exploring our services.",
+//                                    "https://autoadda.com/dashboard"
+//                            );
+//                            log.info("Welcome push notification sent to user: {}", savedUser.getId());
+//                        } catch (Exception e) {
+//                            log.error("Failed to send welcome push notification to user {}: {}",
+//                                    savedUser.getId(), e.getMessage());
+//                            // Don't fail verification if notification fails
+//                        }
                     })
             ;
             return GenericResponse.builder().status(SUCCESS).code("200").message("otp verified Your auto adda id is " + userId).build();

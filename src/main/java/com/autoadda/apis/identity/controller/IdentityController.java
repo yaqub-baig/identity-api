@@ -121,5 +121,9 @@ public class IdentityController {
     public GenericResponse sendSms(@PathVariable Integer userId, @RequestBody SmsRequest request) {
         return notificationAdaptor.sendSms(userId, request);
     }
+    @PostMapping("/send-email/{userId}")
+    public GenericResponse sendEmail(@PathVariable Integer userId,@RequestBody EmailRequest request ){
+        return  notificationAdaptor.sendEmail(userId,request);
+    }
 
 }

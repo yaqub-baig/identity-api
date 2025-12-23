@@ -68,4 +68,22 @@ public class CommunicationPreferenceController {
                     return ResponseEntity.notFound().build();
                 });
     }
+
+    @GetMapping("/isc/{customerId}")
+    public ResponseEntity<CommunicationPreference> getPreferencesByCustomerId1(
+            @PathVariable Integer customerId) {
+        log.debug("GET /preferences/{} - Request received for customer ID: {}", customerId, customerId);
+        // This endpoint could be used by admins to view any user's preferences
+        // For now, allowing it but in production you should add admin role check
+        return service.getPreference(customerId)
+                .map(pref -> {
+                    log.debug("GET /preferences/{} - Found preference: {}", customerId, pref);
+                    return ResponseEntity.ok(pref);
+                })
+                .orElseGet(() -> {
+                    log.debug("GET /preferences/{} - No preference found, returning 404", customerId);
+                    return ResponseEntity.notFound().build();
+                });
+    }
+
 }

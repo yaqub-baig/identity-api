@@ -43,13 +43,22 @@ public class SecurityConfig {
                         .antMatchers(HttpMethod.POST, "/auth/user/**"
                                 , "/auth/logout"
                                 , "/auth/send-sms"
-                                , "/auth/send-sms/**")
+                                , "/auth/send-email/**"
+                                , "/auth/send-sms/**"
+                                , "/notifications/subscribe"
+                                , "/notifications/unsubscribe"
+                                , "/notifications/unsubscribe-role"
+                                , "/notifications/test"
+                                , "/notifications/send")
                         .permitAll()
                         .antMatchers(HttpMethod.PUT, "/auth/update/role/*")
                         .permitAll()
                         .antMatchers(HttpMethod.DELETE, "/auth/remove/role/*")
                         .permitAll()
-                        .antMatchers(HttpMethod.GET, "/auth/*", "/auth/byNumber/*")
+                        .antMatchers(HttpMethod.GET, "/auth/*", "/auth/byNumber/*"
+                                , "/notifications/subscriptions/**","/preferences/isc/**")
+                        .permitAll()
+                        .antMatchers(HttpMethod.DELETE, "/notifications/subscriptions/**")
                         .permitAll()
                         .antMatchers(
                                 "/swagger-ui/**",

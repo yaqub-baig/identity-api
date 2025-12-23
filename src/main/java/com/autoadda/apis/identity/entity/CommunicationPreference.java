@@ -41,4 +41,10 @@ public class CommunicationPreference {
     @Enumerated(EnumType.STRING)
     private Status status;
 
+    private Boolean webpushOnServiceUpdates;
+    private Boolean webpushOnAppointments;
+    private Boolean webpushOnReminders;
+    private Boolean webpushOnOffers;
+    private Boolean webpushOnQuotationRequests;
+
 }

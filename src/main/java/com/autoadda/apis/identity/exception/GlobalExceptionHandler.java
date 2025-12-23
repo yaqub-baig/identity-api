@@ -125,6 +125,12 @@ public class GlobalExceptionHandler {
         log.warn("Unauthorized access", ex);
         return buildResponse(HttpStatus.UNAUTHORIZED, ErrorMessage.ERROR_UNAUTHORIZED);
     }
+    @ExceptionHandler(EmailSendingException.class)
+    public ResponseEntity<GenericResponse> handleUnauthorized(EmailSendingException ex) {
+        log.warn("Unauthorized access", ex);
+        return buildResponse(HttpStatus.BAD_REQUEST, ErrorMessage.ERROR_BAD_REQUEST);
+    }
+
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<GenericResponse> handleResourceNotFound(ResourceNotFoundException ex) {

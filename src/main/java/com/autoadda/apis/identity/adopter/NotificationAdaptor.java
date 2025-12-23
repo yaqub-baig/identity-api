@@ -2,16 +2,19 @@ package com.autoadda.apis.identity.adopter;
 
 import com.autoadda.apis.identity.dao.UserRepository;
 import com.autoadda.apis.identity.entity.User;
+import com.autoadda.apis.identity.exception.EmailSendingException;
 import com.autoadda.apis.identity.exception.OtpExpiredException;
 import com.autoadda.apis.identity.exception.OtpNotSentException;
 import com.autoadda.apis.identity.exception.ResourceNotFoundException;
-import com.autoadda.apis.identity.request.NotificationRequest;
+import com.autoadda.apis.identity.request.EmailRequest;
 import com.autoadda.apis.identity.request.SmsRequest;
 import com.autoadda.apis.identity.request.VerifyOtpRequest;
 import com.autoadda.apis.identity.response.GenericResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
@@ -22,6 +25,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import javax.mail.internet.MimeMessage;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -38,9 +42,12 @@ public class NotificationAdaptor {
     public static final String SMS_RESPONSE = "SMS response: ";
     private final UserRepository userRepository;
     private final RestTemplate restTemplate;
+    private final JavaMailSender mailSender;
 
-    @Value("${notification.service.send.email.url}")
-    private String notificationServiceUrl;
+    @Value("${spring.mail.username}")
+    private String senderEmail;
+
+
     @Value("${notification.service.sms.api.url}")
     private String smsApiUrl;
     @Value("${notification.service.sms.api.key}")
@@ -51,9 +58,10 @@ public class NotificationAdaptor {
     private final Map<String, Map.Entry<String, LocalDateTime>> otpStorage = new ConcurrentHashMap<>();
 
     // Constructor injection for RestTemplate
-    public NotificationAdaptor(UserRepository userRepository, RestTemplate restTemplate) {
+    public NotificationAdaptor(UserRepository userRepository, RestTemplate restTemplate, JavaMailSender mailSender) {
         this.userRepository = userRepository;
         this.restTemplate = restTemplate;
+        this.mailSender = mailSender;
     }
 
     private String generateSecureOtp() {
@@ -62,11 +70,6 @@ public class NotificationAdaptor {
         return String.valueOf(random.nextInt(900000) + 100000);
     }
 
-
-    public GenericResponse callNotificationService(NotificationRequest request) {
-        HttpEntity<NotificationRequest> httpRequest = new HttpEntity<>(request);
-        return restTemplate.postForObject(notificationServiceUrl, httpRequest, GenericResponse.class);
-    }
 
     @Retryable(
             value = {RestClientException.class, ResourceAccessException.class},
@@ -148,7 +151,11 @@ public class NotificationAdaptor {
         return false;
     }
 
-
+    @Retryable(
+            value = {RestClientException.class, ResourceAccessException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 10000, multiplier = 2, maxDelay = 15000)
+    )
     public GenericResponse sendSms(SmsRequest request) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -221,4 +228,47 @@ public class NotificationAdaptor {
             throw new OtpNotSentException("Failed to send OTP. Status: " + response.getStatusCodeValue());
         }
     }
+
+    @Retryable(
+            value = {Exception.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 2000, multiplier = 2, maxDelay = 10000)
+    )
+    public GenericResponse sendEmail(Integer userId, EmailRequest request) {
+        User user = userRepository.findById(userId).orElseThrow(()-> new ResourceNotFoundException("user with this id not found"));
+        validateUserEmail(user);
+        request.setTo(user.getEmail());
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(senderEmail);
+            helper.setTo(request.getTo());
+            helper.setSubject(request.getSubject());
+            helper.setText(request.getBody(), true);
+            mailSender.send(message);
+            log.info("Email sent successfully to: {}", request.getTo());
+            return GenericResponse.builder()
+                    .status(SUCCESS)
+                    .code("200")
+                    .message("Email sent successfully")
+                    .build();
+        } catch (Exception e) {
+            log.error("Failed to send email to: {}", request.getTo(), e);
+            throw new EmailSendingException("Failed to send email", e);
+        }
+    }
+
+    @Recover
+    public GenericResponse recoverFromEmailSendFailure(Exception e, Integer userId, EmailRequest request) {
+        log.error("Failed to send email after retries to user: {}", userId, e);
+        throw new EmailSendingException("Email service temporarily unavailable. Please try again later.", e);
+    }
+
+    private void validateUserEmail(User user) {
+        if(user.getEmail() == null || user.getEmail().isBlank()) {
+            throw new IllegalArgumentException("User email is required");
+        }
+    }
+
 }

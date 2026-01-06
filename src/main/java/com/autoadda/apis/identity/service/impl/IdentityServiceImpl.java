@@ -60,18 +60,21 @@ public class IdentityServiceImpl implements IdentityService {
     private final RefreshTokenService refreshTokenService;
     private final MediaFileRepository mediafileRepository;
     private final CommunicationPreferenceRepository communicationPreferenceRepository;
-//    private final NotificationDispatcher notificationDispatcher;
+    private final NotificationDispatcher notificationDispatcher;
 
 
     @Override
     public GenericResponse registerUserDetails(UserRegisterRequest request) {
         String mobileNumber = "+971" + request.getMobileNumber();
+        log.info("1 " + mobileNumber);
         request.setMobileNumber(mobileNumber);
         boolean userExists = dataValidator.checkUserAlreadyExists(mobileNumber, request.getEmailId());
+        log.info("2 " + userExists);
         if (userExists) {
             if (!dataValidator.checkUserIsVerified(request.getMobileNumber())) {
                 try {
                     notificationAdaptor.callSMSServiceToSendOtp(request.getMobileNumber());
+                    log.info("3 user exist and the otp is send again to this user " + userExists);
                     return new GenericResponse(SUCCESS, "200", "Otp sent successfully", null);
                 } catch (OtpNotSentException e) {
                     log.error("Failed to send OTP after retries for existing user: " + e.getMessage());
@@ -84,6 +87,7 @@ public class IdentityServiceImpl implements IdentityService {
             throw new MemberAlreadyPresentException("user already exists");
         }
         User user = userMapper.tranformUserRequestToUser(request);
+        log.info("4 user not exist and new user is create " + user.getMobileNumber());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         Set<Role> roles = new HashSet<>();
         Role userRole = roleRepository.findByName(ERole.CUSTOMER)
@@ -91,7 +95,8 @@ public class IdentityServiceImpl implements IdentityService {
         roles.add(userRole);
         user.setRoles(roles);
         user = userRepository.save(user);
-
+        log.info("5 user  is save to db " + user.getId());
+        log.info("User registered successfully: " + user.getMobileNumber());
         // Try to send OTP, but don't fail registration if SMS service is down
         try {
             return notificationAdaptor.callSMSServiceToSendOtp(user.getMobileNumber());
@@ -112,32 +117,35 @@ public class IdentityServiceImpl implements IdentityService {
     @Transactional
     public GenericResponse verifyOtp(VerifyOtpRequest request) {
         request.setMobileNumber("+971" + request.getMobileNumber());
+        log.info("6 user  send the verification otp for verifyinying against this number " + request.getMobileNumber());
         AtomicReference<String> userId = new AtomicReference<>("");
         boolean isVerified = notificationAdaptor.verifyOtp(request);
+        log.info("7 otp for verification against this number is  " + isVerified);
         if (isVerified) {
             userRepository.findByMobileNumber(request.getMobileNumber())
                     .ifPresent(user -> {
                         user.setIsVerified(true);
                         User savedUser = userRepository.save(user);
                         userId.set(savedUser.getId().toString());
+                        log.info("8 user is saved in db with verified true " + savedUser.getId());
 
                         // Create default communication preferences if they don't exist
                         createDefaultCommunicationPreferences(savedUser);
 
                         // Send welcome push notification
-//                        try {
-//                            notificationDispatcher.notifyUser(
-//                                    savedUser.getId().toString(),
-//                                    "Welcome to AutoAdda!",
-//                                    "Your account is verified. Start exploring our services.",
-//                                    "https://autoadda.com/dashboard"
-//                            );
-//                            log.info("Welcome push notification sent to user: {}", savedUser.getId());
-//                        } catch (Exception e) {
-//                            log.error("Failed to send welcome push notification to user {}: {}",
-//                                    savedUser.getId(), e.getMessage());
-//                            // Don't fail verification if notification fails
-//                        }
+                        try {
+                            notificationDispatcher.notifyUser(
+                                    savedUser.getId().toString(),
+                                    "Welcome to AutoAdda!",
+                                    "Your account is verified. Start exploring our services.",
+                                    "https://autoadda.mylstech.com"
+                            );
+                            log.info("Welcome push notification sent to user: {}", savedUser.getId());
+                        } catch (Exception e) {
+                            log.error("Failed to send welcome push notification to user {}: {}",
+                                    savedUser.getId(), e.getMessage());
+                            // Don't fail verification if notification fails
+                        }
                     })
             ;
             return GenericResponse.builder().status(SUCCESS).code("200").message("otp verified Your auto adda id is " + userId).build();
@@ -239,16 +247,16 @@ public class IdentityServiceImpl implements IdentityService {
 
     @Override
     public UserResponse getUser(Integer id) {
-        return userRepository.findById(id).map(user -> {
-            return UserResponse.builder()
+        return userRepository.findById(id).map(user ->
+             UserResponse.builder()
                     .id(user.getId())
                     .name(user.getFirstName().concat(" " + user.getLastName()))
                     .email(user.getEmail())
                     .mobileNumber(user.getMobileNumber())
                     .isVerified(user.getIsVerified())
                     .profileImage(user.getProfileImage().isEmpty() ? null : user.getProfileImage().get(0))
-                    .build();
-        }).orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_WITH_ID + id));
+                    .build()
+        ).orElseThrow(() -> new ResourceNotFoundException(USER_NOT_FOUND_WITH_ID + id));
     }
 
 
@@ -258,8 +266,7 @@ public class IdentityServiceImpl implements IdentityService {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new JwtException("User not authenticated");
         }
-        if (authentication.getPrincipal() instanceof UserSecurityDetails) {
-            UserSecurityDetails userDetails = (UserSecurityDetails) authentication.getPrincipal();
+        if (authentication.getPrincipal() instanceof UserSecurityDetails userDetails) {
             return userDetails.getUser().getId();
         }
         log.info(AUTHENTICATION + authentication.getName());
@@ -276,8 +283,7 @@ public class IdentityServiceImpl implements IdentityService {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new JwtException("User not authenticated");
         }
-        if (authentication.getPrincipal() instanceof UserSecurityDetails) {
-            UserSecurityDetails userDetails = (UserSecurityDetails) authentication.getPrincipal();
+        if (authentication.getPrincipal() instanceof UserSecurityDetails userDetails) {
             return userDetails.getUser();
         }
         log.info(AUTHENTICATION + authentication.getName());

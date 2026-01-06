@@ -1,8 +1,10 @@
 package com.autoadda.apis.identity.service.impl;
 
 import com.autoadda.apis.identity.adopter.NotificationAdaptor;
+import com.autoadda.apis.identity.dao.CommunicationPreferenceRepository;
 import com.autoadda.apis.identity.dao.RoleRepository;
 import com.autoadda.apis.identity.dao.UserRepository;
+import com.autoadda.apis.identity.service.NotificationDispatcher;
 import com.autoadda.apis.identity.entity.RefreshToken;
 import com.autoadda.apis.identity.entity.Role;
 import com.autoadda.apis.identity.entity.User;
@@ -64,6 +66,13 @@ class PlatformAuthenticationServiceImplTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private CommunicationPreferenceRepository communicationPreferenceRepository;
+
+    @Mock
+    private NotificationDispatcher notificationDispatcher;
+
     @Mock
     private JwtUtil jwtUtil;
 
@@ -268,6 +277,9 @@ class PlatformAuthenticationServiceImplTest {
         when(platformNotificationAdaptor.verifyOtp(request)).thenReturn(true);
         when(userRepository.findByMobileNumber("+9710000000")).thenReturn(Optional.of(existingUser));
         when(userRepository.save(any(User.class))).thenReturn(updatedUser);
+        when(communicationPreferenceRepository.findByUserId(1)).thenReturn(Optional.empty());
+        when(communicationPreferenceRepository.save(any())).thenReturn(null);
+        doNothing().when(notificationDispatcher).notifyUser(anyString(), anyString(), anyString(), anyString());
 
         // Act
         GenericResponse actualResponse = platformAuthenticationService.verifyOtp(request);
@@ -276,7 +288,7 @@ class PlatformAuthenticationServiceImplTest {
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse.getStatus()).isEqualTo("success");
         assertThat(actualResponse.getCode()).isEqualTo("200");
-        assertThat(actualResponse.getMessage()).isEqualTo("otp verified");
+        assertThat(actualResponse.getMessage()).isEqualTo("otp verified Your auto adda id is 1");
 
         // Verify interactions
         verify(platformNotificationAdaptor).verifyOtp(request);
@@ -306,7 +318,7 @@ class PlatformAuthenticationServiceImplTest {
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse.getStatus()).isEqualTo("success");
         assertThat(actualResponse.getCode()).isEqualTo("200");
-        assertThat(actualResponse.getMessage()).isEqualTo("otp verified");
+        assertThat(actualResponse.getMessage()).isEqualTo("otp verified Your auto adda id is ");
 
         // Verify interactions
         verify(platformNotificationAdaptor).verifyOtp(request);
@@ -951,10 +963,6 @@ class PlatformAuthenticationServiceImplTest {
         mockUser.setPassword("oldEncodedPassword");
         mockUser.setRoles(new HashSet<>());
 
-        // Mock the repository to find user by mobile number
-        when(userRepository.findByMobileNumber(mockUser.getMobileNumber()))
-                .thenReturn(Optional.of(mockUser));
-
         // Setup security context with the mock user
         setupSecurityContext(mockUser);
 
@@ -977,7 +985,6 @@ class PlatformAuthenticationServiceImplTest {
         assertThat(response.getMessage()).isEqualTo("Password reset successfully");
 
         // Verify interactions
-        verify(userRepository).findByMobileNumber("+9710000000");
         verify(userRepository).findById(1);
         verify(passwordEncoder).encode("newPassword123");
         verify(userRepository).save(any(User.class));
@@ -1097,8 +1104,7 @@ class PlatformAuthenticationServiceImplTest {
         Integer actualUserId = platformAuthenticationService.getCurrentUserId();
 
         // Assert
-        assertThat(actualUserId).isNotNull();
-        assertThat(actualUserId).isEqualTo(expectedUserId);
+        assertThat(actualUserId).isNotNull().isEqualTo(expectedUserId);
 
         // Verify interactions
         verify(mockSecurityContext).getAuthentication();
@@ -1268,7 +1274,7 @@ class PlatformAuthenticationServiceImplTest {
         SecurityContextHolder.getContext().setAuthentication(authentication1);
 
         // Also mock the repository to return this user when queried by mobile number
-        when(userRepository.findByMobileNumber(user.getMobileNumber()))
+        lenient().when(userRepository.findByMobileNumber(user.getMobileNumber()))
                 .thenReturn(Optional.of(user));
     }
 

@@ -46,14 +46,12 @@ public class NotificationAdaptor {
 
     @Value("${spring.mail.username}")
     private String senderEmail;
-
-
     @Value("${notification.service.sms.api.url}")
     private String smsApiUrl;
     @Value("${notification.service.sms.api.key}")
     private String apiKey;
     @Value("${notification.service.sms.sender.id}")
-    private String senderId;
+    private String smsSenderId;
 
     private final Map<String, Map.Entry<String, LocalDateTime>> otpStorage = new ConcurrentHashMap<>();
 
@@ -94,7 +92,7 @@ public class NotificationAdaptor {
         params.add(API_KEY, apiKey);
         params.add("type", "text");
         params.add(CONTACTS, mobileNumber);
-        params.add(SENDERID, senderId);
+        params.add(SENDERID, smsSenderId);
         params.add("msg", otp);
         HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(params, headers);
         log.info("payload: " + entity.toString());
@@ -163,7 +161,7 @@ public class NotificationAdaptor {
         params.add(API_KEY, apiKey);
         params.add("type", "text");
         params.add(CONTACTS, request.getPhoneNumber());
-        params.add(SENDERID, senderId);
+        params.add(SENDERID, smsSenderId);
         params.add("msg", request.getMessage());
         HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(params, headers);
 
@@ -204,7 +202,7 @@ public class NotificationAdaptor {
         params.add(API_KEY, apiKey);
         params.add("type", "text");
         params.add(CONTACTS, mobileNumber);
-        params.add(SENDERID, senderId);
+        params.add(SENDERID, smsSenderId);
         params.add("msg", request.getMessage());
         HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(params, headers);
 

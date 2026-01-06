@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 
 @Slf4j
 @Service
@@ -21,74 +22,33 @@ public class CommunicationPreferenceServiceImpl implements CommunicationPreferen
     private final CommunicationPreferenceRepository repository;
     private final IdentityService identityService;
 
+    private <T> void setIfNotNull(T value, Consumer<T> setter, String fieldName) {
+        if (value != null) {
+            log.debug("mapToEntity - Setting {}: {}", fieldName, value);
+            setter.accept(value);
+        }
+    }
+
     CommunicationPreference mapToEntity(CommunicationPreferenceRequest preferenceRequest, CommunicationPreference communicationPreference) {
         log.debug("mapToEntity - Mapping request to entity. Request: {}", preferenceRequest);
         log.debug("mapToEntity - Existing entity ID: {}", communicationPreference.getId());
 
-        if (preferenceRequest.getEmailOnServiceUpdates() != null) {
-            log.debug("mapToEntity - Setting emailOnServiceUpdates: {}", preferenceRequest.getEmailOnServiceUpdates());
-            communicationPreference.setEmailOnServiceUpdates(preferenceRequest.getEmailOnServiceUpdates());
-        }
-        if (preferenceRequest.getSmsOnServiceUpdates() != null) {
-            log.debug("mapToEntity - Setting smsOnServiceUpdates: {}", preferenceRequest.getSmsOnServiceUpdates());
-            communicationPreference.setSmsOnServiceUpdates(preferenceRequest.getSmsOnServiceUpdates());
-        }
-        if (preferenceRequest.getEmailOnAppointments() != null) {
-            log.debug("mapToEntity - Setting emailOnAppointments: {}", preferenceRequest.getEmailOnAppointments());
-            communicationPreference.setEmailOnAppointments(preferenceRequest.getEmailOnAppointments());
-        }
-        if (preferenceRequest.getSmsOnAppointments() != null) {
-            log.debug("mapToEntity - Setting smsOnAppointments: {}", preferenceRequest.getSmsOnAppointments());
-            communicationPreference.setSmsOnAppointments(preferenceRequest.getSmsOnAppointments());
-        }
-        if (preferenceRequest.getEmailOnReminders() != null) {
-            log.debug("mapToEntity - Setting emailOnReminders: {}", preferenceRequest.getEmailOnReminders());
-            communicationPreference.setEmailOnReminders(preferenceRequest.getEmailOnReminders());
-        }
-        if (preferenceRequest.getSmsOnReminders() != null) {
-            log.debug("mapToEntity - Setting smsOnReminders: {}", preferenceRequest.getSmsOnReminders());
-            communicationPreference.setSmsOnReminders(preferenceRequest.getSmsOnReminders());
-        }
-        if (preferenceRequest.getEmailOnOffers() != null) {
-            log.debug("mapToEntity - Setting emailOnOffers: {}", preferenceRequest.getEmailOnOffers());
-            communicationPreference.setEmailOnOffers(preferenceRequest.getEmailOnOffers());
-        }
-        if (preferenceRequest.getSmsOnOffers() != null) {
-            log.debug("mapToEntity - Setting smsOnOffers: {}", preferenceRequest.getSmsOnOffers());
-            communicationPreference.setSmsOnOffers(preferenceRequest.getSmsOnOffers());
-        }
-        if (preferenceRequest.getEmailOnQuotationRequests() != null) {
-            log.debug("mapToEntity - Setting emailOnQuotationRequests: {}", preferenceRequest.getEmailOnQuotationRequests());
-            communicationPreference.setEmailOnQuotationRequests(preferenceRequest.getEmailOnQuotationRequests());
-        }
-        if (preferenceRequest.getSmsOnQuotationRequests() != null) {
-            log.debug("mapToEntity - Setting smsOnQuotationRequests: {}", preferenceRequest.getSmsOnQuotationRequests());
-            communicationPreference.setSmsOnQuotationRequests(preferenceRequest.getSmsOnQuotationRequests());
-        }
-        if (preferenceRequest.getStatus() != null) {
-            log.debug("mapToEntity - Setting status: {}", preferenceRequest.getStatus());
-            communicationPreference.setStatus(preferenceRequest.getStatus());
-        }
-        if (preferenceRequest.getWebpushOnServiceUpdates() != null) {
-            log.debug("mapToEntity - Setting webpushOnServiceUpdates: {}", preferenceRequest.getWebpushOnServiceUpdates());
-            communicationPreference.setWebpushOnServiceUpdates(preferenceRequest.getWebpushOnServiceUpdates());
-        }
-        if (preferenceRequest.getWebpushOnAppointments() != null) {
-            log.debug("mapToEntity - Setting webpushOnAppointments: {}", preferenceRequest.getWebpushOnAppointments());
-            communicationPreference.setWebpushOnAppointments(preferenceRequest.getWebpushOnAppointments());
-        }
-        if (preferenceRequest.getWebpushOnReminders() != null) {
-            log.debug("mapToEntity - Setting webpushOnReminders: {}", preferenceRequest.getWebpushOnReminders());
-            communicationPreference.setWebpushOnReminders(preferenceRequest.getWebpushOnReminders());
-        }
-        if (preferenceRequest.getWebpushOnOffers() != null) {
-            log.debug("mapToEntity - Setting webpushOnOffers: {}", preferenceRequest.getWebpushOnOffers());
-            communicationPreference.setWebpushOnOffers(preferenceRequest.getWebpushOnOffers());
-        }
-        if (preferenceRequest.getWebpushOnQuotationRequests() != null) {
-            log.debug("mapToEntity - Setting webpushOnQuotationRequests: {}", preferenceRequest.getWebpushOnQuotationRequests());
-            communicationPreference.setWebpushOnQuotationRequests(preferenceRequest.getWebpushOnQuotationRequests());
-        }
+        setIfNotNull(preferenceRequest.getWebpushOnQuotationRequests(), communicationPreference::setWebpushOnQuotationRequests, "webpushOnQuotationRequests");
+        setIfNotNull(preferenceRequest.getEmailOnQuotationRequests(), communicationPreference::setEmailOnQuotationRequests, "emailOnQuotationRequests");
+        setIfNotNull(preferenceRequest.getWebpushOnServiceUpdates(), communicationPreference::setWebpushOnServiceUpdates, "webpushOnServiceUpdates");
+        setIfNotNull(preferenceRequest.getSmsOnQuotationRequests(), communicationPreference::setSmsOnQuotationRequests, "smsOnQuotationRequests");
+        setIfNotNull(preferenceRequest.getWebpushOnAppointments(), communicationPreference::setWebpushOnAppointments, "webpushOnAppointments");
+        setIfNotNull(preferenceRequest.getEmailOnServiceUpdates(), communicationPreference::setEmailOnServiceUpdates, "emailOnServiceUpdates");
+        setIfNotNull(preferenceRequest.getSmsOnServiceUpdates(), communicationPreference::setSmsOnServiceUpdates, "smsOnServiceUpdates");
+        setIfNotNull(preferenceRequest.getEmailOnAppointments(), communicationPreference::setEmailOnAppointments, "emailOnAppointments");
+        setIfNotNull(preferenceRequest.getWebpushOnReminders(), communicationPreference::setWebpushOnReminders, "webpushOnReminders");
+        setIfNotNull(preferenceRequest.getSmsOnAppointments(), communicationPreference::setSmsOnAppointments, "smsOnAppointments");
+        setIfNotNull(preferenceRequest.getEmailOnReminders(), communicationPreference::setEmailOnReminders, "emailOnReminders");
+        setIfNotNull(preferenceRequest.getWebpushOnOffers(), communicationPreference::setWebpushOnOffers, "webpushOnOffers");
+        setIfNotNull(preferenceRequest.getSmsOnReminders(), communicationPreference::setSmsOnReminders, "smsOnReminders");
+        setIfNotNull(preferenceRequest.getEmailOnOffers(), communicationPreference::setEmailOnOffers, "emailOnOffers");
+        setIfNotNull(preferenceRequest.getSmsOnOffers(), communicationPreference::setSmsOnOffers, "smsOnOffers");
+        setIfNotNull(preferenceRequest.getStatus(), communicationPreference::setStatus, "status");
 
         log.debug("mapToEntity - Mapped entity: {}", communicationPreference);
         return communicationPreference;
@@ -116,9 +76,7 @@ public class CommunicationPreferenceServiceImpl implements CommunicationPreferen
         log.debug("getPreference - Looking for preferences for customer ID: {}", customerId);
         Optional<CommunicationPreference> result = repository.findByUserId(customerId);
         log.debug("getPreference - Found preference: {}", result.isPresent());
-        if (result.isPresent()) {
-            log.debug("getPreference - Preference details: {}", result.get());
-        }
+        result.ifPresent(communicationPreference -> log.debug("getPreference - Preference details: {}", communicationPreference));
         return result;
     }
 

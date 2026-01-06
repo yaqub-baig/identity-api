@@ -50,6 +50,7 @@ public class User {
 
     @OneToMany
     @JoinColumn(name = "user_profile_image")
+    @Builder.Default
     private List<MediaFile> profileImage = new ArrayList<>();
 
 }

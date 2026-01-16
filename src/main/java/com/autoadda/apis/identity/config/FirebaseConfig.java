@@ -3,13 +3,12 @@ package com.autoadda.apis.identity.config;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
-import com.google.firebase.auth.FirebaseAuth;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.io.IOException;
 import java.io.InputStream;
 @Slf4j
@@ -18,7 +17,6 @@ public class FirebaseConfig {
 
     @Value("${app.firebase-config-file:google/firebase-service-account.json}")
     private String firebaseConfigPath;
-    private FirebaseAuth firebaseAuth;
 
     @PostConstruct
     public void initialize() {
@@ -30,7 +28,6 @@ public class FirebaseConfig {
                 FirebaseApp.initializeApp ( options );
                 log.info ( "Firebase has been initialized" );
             }
-            firebaseAuth = FirebaseAuth.getInstance();
         } catch ( IOException e) {
             log.error("Could not initialize Firebase: {}", e.getMessage());
         }

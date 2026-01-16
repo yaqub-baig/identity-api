@@ -38,9 +38,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // For Spring Boot 2.7.14 (Spring Security 5.7.x)
-                .authorizeRequests(auth -> auth
-                        .antMatchers(HttpMethod.POST, "/auth/user/**"
+                // For Spring Boot 3.3.13 (Spring Security 6.x)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.POST, "/auth/user/**"
                                 , "/auth/logout"
                                 , "/auth/send-sms"
                                 , "/auth/send-email/**"
@@ -51,16 +51,16 @@ public class SecurityConfig {
                                 , "/notifications/test"
                                 , "/notifications/send")
                         .permitAll()
-                        .antMatchers(HttpMethod.PUT, "/auth/update/role/*")
+                        .requestMatchers(HttpMethod.PUT, "/auth/update/role/*")
                         .permitAll()
-                        .antMatchers(HttpMethod.DELETE, "/auth/remove/role/*")
+                        .requestMatchers(HttpMethod.DELETE, "/auth/remove/role/*")
                         .permitAll()
-                        .antMatchers(HttpMethod.GET, "/auth/*", "/auth/byNumber/*"
+                        .requestMatchers(HttpMethod.GET, "/auth/*", "/auth/byNumber/*"
                                 , "/notifications/subscriptions/**","/preferences/isc/**")
                         .permitAll()
-                        .antMatchers(HttpMethod.DELETE, "/notifications/subscriptions/**")
+                        .requestMatchers(HttpMethod.DELETE, "/notifications/subscriptions/**")
                         .permitAll()
-                        .antMatchers(
+                        .requestMatchers(
                                 "/swagger-ui/**",
                                 "/uploads/**",
                                 "/swagger-ui.html",

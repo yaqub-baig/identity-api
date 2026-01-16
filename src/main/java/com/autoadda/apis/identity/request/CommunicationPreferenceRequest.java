@@ -4,8 +4,8 @@ package com.autoadda.apis.identity.request;
 import com.autoadda.apis.identity.util.Status;
 import lombok.*;
 
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 @Getter
 @Setter

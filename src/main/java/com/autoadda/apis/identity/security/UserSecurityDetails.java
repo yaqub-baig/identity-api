@@ -12,7 +12,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserSecurityDetails implements UserDetails {
 
-    private final User user;
+    private static final long serialVersionUID = 1L;
+    private final transient User user;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

@@ -186,6 +186,18 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ErrorMessage.ERROR_OTP_SENDING_FAILED);
     }
 
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<GenericResponse> handleBadRequestException(BadRequestException ex) {
+        log.warn("Bad request: {}", ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(PaymentGatewayException.class)
+    public ResponseEntity<GenericResponse> handlePaymentGatewayException(PaymentGatewayException ex) {
+        log.error("Payment gateway error: {}", ex.getMessage(), ex);
+        return buildResponse(HttpStatus.BAD_GATEWAY, "Payment processing failed: " + ex.getMessage());
+    }
+
     private ResponseEntity<GenericResponse> buildResponse(HttpStatus status, String message) {
         return ResponseEntity.status(status).body(GenericResponse.builder().status("failed")
                 .code(String.valueOf(status.value())).message(message).build());

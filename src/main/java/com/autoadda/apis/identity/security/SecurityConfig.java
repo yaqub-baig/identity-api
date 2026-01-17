@@ -56,7 +56,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/auth/remove/role/*")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/auth/*", "/auth/byNumber/*"
-                                , "/notifications/subscriptions/**","/preferences/isc/**")
+                                , "/notifications/subscriptions/**","/preferences/isc/**"
+                                , "/subscriptions/plans/active", "/subscriptions/plans/active/**")
                         .permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/notifications/subscriptions/**")
                         .permitAll()

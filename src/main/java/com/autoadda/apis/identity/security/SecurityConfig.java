@@ -40,6 +40,8 @@ public class SecurityConfig {
 
                 // For Spring Boot 3.3.13 (Spring Security 6.x)
                 .authorizeHttpRequests(auth -> auth
+                        // Admin dashboard endpoints - restricted to ROLE_ADMIN
+                        .requestMatchers("/auth/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/auth/user/**"
                                 , "/auth/logout"
                                 , "/auth/send-sms"

@@ -8,7 +8,7 @@ on:
 env:
   SERVICE_NAME: identity  # CHANGE THIS: identity/garage/vehicle/quote/part/otherservice
   SERVICE_PORT: 8010      # CHANGE THIS: 8010/8020/8030/8050/8060/9010
-  JAVA_VERSION: 21         # CHANGE THIS: 21 / 21  / 17 / 21 / 17 / 21
+  JAVA_VERSION: 21         # CHANGE THIS: 21 / 21  / 21 / 21 / 21 / 21
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest

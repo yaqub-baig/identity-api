@@ -1,9 +1,12 @@
 package com.autoadda.apis.identity.entity;
 
 
+import com.autoadda.apis.identity.util.Status;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -40,6 +43,14 @@ public class User {
 
     @Column(name = "is_verified")
     private Boolean isVerified;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 30)
+    private Status status;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
     @ManyToMany(fetch = FetchType.EAGER) // or LAZY if you prefer
     @JoinTable(

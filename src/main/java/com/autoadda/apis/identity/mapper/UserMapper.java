@@ -3,6 +3,7 @@ package com.autoadda.apis.identity.mapper;
 
 import com.autoadda.apis.identity.entity.User;
 import com.autoadda.apis.identity.request.UserRegisterRequest;
+import com.autoadda.apis.identity.util.Status;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,6 +16,7 @@ public class UserMapper {
                 .email(request.getEmailId())
                 .mobileNumber(request.getMobileNumber())
                 .isVerified(false)
+                .status(Status.ACTIVE)
                 .build();
     }
 

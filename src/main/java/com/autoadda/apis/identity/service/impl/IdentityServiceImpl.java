@@ -1,11 +1,13 @@
 package com.autoadda.apis.identity.service.impl;
 
 import com.autoadda.apis.identity.adopter.NotificationAdaptor;
+import com.autoadda.apis.identity.adopter.RecaptchaAdaptor;
 import com.autoadda.apis.identity.dao.CommunicationPreferenceRepository;
 import com.autoadda.apis.identity.dao.MediaFileRepository;
 import com.autoadda.apis.identity.dao.RoleRepository;
 import com.autoadda.apis.identity.dao.UserRepository;
 import com.autoadda.apis.identity.entity.*;
+import com.autoadda.apis.identity.exception.BadRequestException;
 import com.autoadda.apis.identity.exception.MemberAlreadyPresentException;
 import com.autoadda.apis.identity.exception.ResourceNotFoundException;
 import com.autoadda.apis.identity.mapper.UserMapper;
@@ -60,10 +62,14 @@ public class IdentityServiceImpl implements IdentityService {
     private final MediaFileRepository mediafileRepository;
     private final CommunicationPreferenceRepository communicationPreferenceRepository;
     private final NotificationDispatcher notificationDispatcher;
+    private final RecaptchaAdaptor recaptchaAdaptor;
 
 
     @Override
     public GenericResponse registerUserDetails(UserRegisterRequest request) {
+        if (!recaptchaAdaptor.verifyToken(request.getCaptchaToken())) {
+            throw new BadRequestException("Captcha verification failed");
+        }
         String mobileNumber = "+971" + request.getMobileNumber();
         log.info("1 " + mobileNumber);
         request.setMobileNumber(mobileNumber);

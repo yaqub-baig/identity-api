@@ -1,6 +1,7 @@
 package com.autoadda.apis.identity.service.impl;
 
 import com.autoadda.apis.identity.adopter.NotificationAdaptor;
+import com.autoadda.apis.identity.adopter.RecaptchaAdaptor;
 import com.autoadda.apis.identity.dao.CommunicationPreferenceRepository;
 import com.autoadda.apis.identity.dao.RoleRepository;
 import com.autoadda.apis.identity.dao.UserRepository;
@@ -8,6 +9,7 @@ import com.autoadda.apis.identity.service.NotificationDispatcher;
 import com.autoadda.apis.identity.entity.RefreshToken;
 import com.autoadda.apis.identity.entity.Role;
 import com.autoadda.apis.identity.entity.User;
+import com.autoadda.apis.identity.exception.BadRequestException;
 import com.autoadda.apis.identity.exception.MemberAlreadyPresentException;
 import com.autoadda.apis.identity.exception.OtpNotSentException;
 import com.autoadda.apis.identity.exception.ResourceNotFoundException;
@@ -83,6 +85,9 @@ class PlatformAuthenticationServiceImplTest {
     @Mock
     private AuthenticationManager authenticationManager;
 
+    @Mock
+    private RecaptchaAdaptor recaptchaAdaptor;
+
 
     @Mock
     private Authentication authentication;
@@ -123,6 +128,7 @@ class PlatformAuthenticationServiceImplTest {
         GenericResponse emailResponse = new GenericResponse ( "success", "200", "OTP sent successfully", null );
 
         // Mock behaviors
+        when ( recaptchaAdaptor.verifyToken ( any ( ) ) ).thenReturn ( true );
         when ( platformDataValidator.checkUserAlreadyExists ( "+9710000000", request.getEmailId ( ) ) ).thenReturn ( false );
         when ( platformObjectTransformer.tranformUserRequestToUser ( request ) ).thenReturn ( mockUser );
         when ( passwordEncoder.encode ( "testPassword" ) ).thenReturn ( "encodedPassword" );
@@ -170,6 +176,7 @@ class PlatformAuthenticationServiceImplTest {
         GenericResponse emailResponse = new GenericResponse ( "success", "200", "OTP sent successfully", null );
 
         // Mock behaviors
+        when ( recaptchaAdaptor.verifyToken ( any ( ) ) ).thenReturn ( true );
         when ( platformDataValidator.checkUserAlreadyExists ( "+9710000000", request.getEmailId ( ) ) ).thenReturn ( true );
         when ( platformDataValidator.checkUserIsVerified ( "+9710000000" ) ).thenReturn ( false );
         when ( platformNotificationAdaptor.generateAndStoreOtp ( "+9710000000", "test@gmail.com" ) ).thenReturn ( otp );
@@ -209,6 +216,7 @@ class PlatformAuthenticationServiceImplTest {
         request.setPassword ( "testPassword" );
 
         // Mock behaviors
+        when ( recaptchaAdaptor.verifyToken ( any ( ) ) ).thenReturn ( true );
         when ( platformDataValidator.checkUserAlreadyExists ( "+9710000000", request.getEmailId ( ) ) ).thenReturn ( true );
         when ( platformDataValidator.checkUserIsVerified ( "+9710000000" ) ).thenReturn ( true );
 
@@ -244,6 +252,7 @@ class PlatformAuthenticationServiceImplTest {
         mockUser.setMobileNumber ( "+9710000000" );
 
         // Mock behaviors
+        when ( recaptchaAdaptor.verifyToken ( any ( ) ) ).thenReturn ( true );
         when ( platformDataValidator.checkUserAlreadyExists ( "+9710000000", request.getEmailId ( ) ) ).thenReturn ( false );
         when ( platformObjectTransformer.tranformUserRequestToUser ( request ) ).thenReturn ( mockUser );
         when ( passwordEncoder.encode ( "testPassword" ) ).thenReturn ( "encodedPassword" );
@@ -265,7 +274,27 @@ class PlatformAuthenticationServiceImplTest {
         verify ( platformNotificationAdaptor, never ( ) ).generateAndStoreOtp ( any ( ), any ( ) );
     }
 
+    @Test
+    void registerUserDetails_invalidCaptcha_shouldThrowException() {
+        // Arrange
+        UserRegisterRequest request = new UserRegisterRequest ( );
+        request.setMobileNumber ( "0000000" );
+        request.setEmailId ( "test@gmail.com" );
+        request.setPassword ( "testPassword" );
+        request.setCaptchaToken ( "invalid-token" );
 
+        // Mock behaviors
+        when ( recaptchaAdaptor.verifyToken ( "invalid-token" ) ).thenReturn ( false );
+
+        // Act & Assert
+        assertThatThrownBy ( () -> platformAuthenticationService.registerUserDetails ( request ) )
+                .isInstanceOf ( BadRequestException.class )
+                .hasMessage ( "Captcha verification failed" );
+
+        // Verify that user lookup and creation methods are NOT called
+        verify ( platformDataValidator, never ( ) ).checkUserAlreadyExists ( any ( ), any ( ) );
+        verify ( userRepository, never ( ) ).save ( any ( ) );
+    }
 
 
     @Order(5)

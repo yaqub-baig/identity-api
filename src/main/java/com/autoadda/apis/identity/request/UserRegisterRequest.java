@@ -13,4 +13,5 @@ public class UserRegisterRequest {
     private String emailId;
     private String mobileNumber;
     private String password;
+    private String captchaToken;
 }

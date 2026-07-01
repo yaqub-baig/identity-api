@@ -68,7 +68,6 @@ public class NotificationAdaptor {
         return String.valueOf(random.nextInt(900000) + 100000);
     }
 
-
     @Retryable(
             value = {RestClientException.class, ResourceAccessException.class},
             maxAttempts = 3,
@@ -124,6 +123,100 @@ public class NotificationAdaptor {
             RestClientException e, String mobileNumber) {
         log.error("Failed to send SMS after 3 retry attempts to: {}", mobileNumber, e);
         throw new OtpNotSentException("SMS service temporarily unavailable. Please try again later.");
+    }
+
+    /**
+     * Generates a single OTP and stores it under the mobile number key and,
+     * when present, the email key too, so either identifier resolves the same OTP.
+     */
+    public String generateAndStoreOtp(String mobileNumber, String email) {
+        String otp = generateSecureOtp();
+        LocalDateTime expiry = LocalDateTime.now().plusMinutes(5);
+        otpStorage.put(mobileNumber, Map.entry(otp, expiry));
+        if (email != null && !email.isBlank()) {
+            otpStorage.put(email, Map.entry(otp, expiry));
+        }
+        return otp;
+    }
+
+    @Retryable(
+            value = {RestClientException.class, ResourceAccessException.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 10000, multiplier = 2, maxDelay = 15000)
+    )
+    public GenericResponse sendSmsOtpMessage(String mobileNumber, String otp) {
+        log.info("Attempting SMS send to: {} via {}", mobileNumber, smsApiUrl);
+        String message = String.format("Your OTP is: %s. Do not share this with anyone.", otp);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add(API_KEY, apiKey);
+        params.add("type", "text");
+        params.add(CONTACTS, mobileNumber);
+        params.add(SENDERID, smsSenderId);
+        params.add("msg", message);
+        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(params, headers);
+        ResponseEntity<String> response = restTemplate.exchange(
+                smsApiUrl,
+                HttpMethod.POST,
+                entity,
+                String.class
+        );
+        log.info(SMS_RESPONSE + response.getBody());
+        if (response.getStatusCode().is2xxSuccessful()) {
+            log.info("SMS sent successfully to: {}", mobileNumber);
+            return GenericResponse.builder()
+                    .status(SUCCESS)
+                    .code("200")
+                    .message("OTP sent successfully")
+                    .build();
+        } else {
+            log.error(FAILED_TO_SEND_OTP_STATUS_RESPONSE,
+                    response.getStatusCodeValue(),
+                    response.getBody());
+            throw new OtpNotSentException("Failed to send OTP. Status: " + response.getStatusCodeValue());
+        }
+    }
+
+    @Recover
+    public GenericResponse recoverFromSmsOtpMessageFailure(
+            RestClientException e, String mobileNumber, String otp) {
+        log.error("Failed to send SMS OTP after 3 retry attempts to: {}", mobileNumber, e);
+        throw new OtpNotSentException("SMS service temporarily unavailable. Please try again later.");
+    }
+
+    @Retryable(
+            value = {Exception.class},
+            maxAttempts = 3,
+            backoff = @Backoff(delay = 2000, multiplier = 2, maxDelay = 10000)
+    )
+    public GenericResponse callEmailServiceToSendOtp(String email, String otp) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(senderEmail);
+            helper.setTo(email);
+            helper.setSubject("Your AutoAdda OTP");
+            helper.setText(String.format(
+                    "Your OTP is: %s. It will expire in 5 minutes. Do not share this with anyone.", otp), true);
+            mailSender.send(message);
+            log.info("OTP email sent successfully to: {}", email);
+            return GenericResponse.builder()
+                    .status(SUCCESS)
+                    .code("200")
+                    .message("OTP sent successfully")
+                    .build();
+        } catch (Exception e) {
+            log.error("Failed to send OTP email to: {}", email, e);
+            throw new EmailSendingException("Failed to send OTP email", e);
+        }
+    }
+
+    @Recover
+    public GenericResponse recoverFromEmailOtpSendFailure(Exception e, String email, String otp) {
+        log.error("Failed to send OTP email after retries to: {}", email, e);
+        throw new EmailSendingException("Email OTP service temporarily unavailable.", e);
     }
 
     public boolean verifyOtp(VerifyOtpRequest request) {

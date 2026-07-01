@@ -7,7 +7,6 @@ import com.autoadda.apis.identity.dao.RoleRepository;
 import com.autoadda.apis.identity.dao.UserRepository;
 import com.autoadda.apis.identity.entity.*;
 import com.autoadda.apis.identity.exception.MemberAlreadyPresentException;
-import com.autoadda.apis.identity.exception.OtpNotSentException;
 import com.autoadda.apis.identity.exception.ResourceNotFoundException;
 import com.autoadda.apis.identity.mapper.UserMapper;
 import com.autoadda.apis.identity.request.*;
@@ -72,17 +71,8 @@ public class IdentityServiceImpl implements IdentityService {
         log.info("2 " + userExists);
         if (userExists) {
             if (!dataValidator.checkUserIsVerified(request.getMobileNumber())) {
-                try {
-                    notificationAdaptor.callSMSServiceToSendOtp(request.getMobileNumber());
-                    log.info("3 user exist and the otp is send again to this user " + userExists);
-                    return new GenericResponse(SUCCESS, "200", "Otp sent successfully", null);
-                } catch (OtpNotSentException e) {
-                    log.error("Failed to send OTP after retries for existing user: " + e.getMessage());
-                    return new GenericResponse(FAILED, "503", "User already exist", null);
-                } catch (Exception e) {
-                    log.error("Unexpected error sending OTP for existing user: " + e.getMessage(), e);
-                    return new GenericResponse(FAILED, "500", "Failed to send OTP. Please contact support.", null);
-                }
+                log.info("3 user exist and the otp is send again to this user " + userExists);
+                return sendOtpViaSmsAndEmail(request.getMobileNumber(), request.getEmailId());
             }
             throw new MemberAlreadyPresentException("user already exists");
         }
@@ -97,20 +87,42 @@ public class IdentityServiceImpl implements IdentityService {
         user = userRepository.save(user);
         log.info("5 user  is save to db " + user.getId());
         log.info("User registered successfully: " + user.getMobileNumber());
-        // Try to send OTP, but don't fail registration if SMS service is down
-        try {
-            return notificationAdaptor.callSMSServiceToSendOtp(user.getMobileNumber());
-        } catch (OtpNotSentException e) {
-            log.error("Failed to send OTP after retries for user registration: " + e.getMessage());
+        GenericResponse otpResponse = sendOtpViaSmsAndEmail(user.getMobileNumber(), user.getEmail());
+        if (FAILED.equals(otpResponse.getStatus())) {
             return new GenericResponse(FAILED, "503",
-                    "Registration successful but OTP service unavailable. Please use resend OTP.",
-                    null);
-        } catch (Exception e) {
-            log.error("Unexpected error sending OTP: " + e.getMessage(), e);
-            return new GenericResponse(FAILED, "500",
-                    "Registration successful but failed to send OTP. Please contact support.",
-                    null);
+                    "Registration successful but OTP delivery failed. Please use resend OTP.", null);
         }
+        return otpResponse;
+    }
+
+    /**
+     * Sends a single OTP to both the mobile number and email so OTP delivery doesn't
+     * depend entirely on SMS; succeeds if at least one channel gets through.
+     */
+    private GenericResponse sendOtpViaSmsAndEmail(String mobileNumber, String email) {
+        String otp = notificationAdaptor.generateAndStoreOtp(mobileNumber, email);
+        boolean smsSent = false;
+        boolean emailSent = false;
+        try {
+            notificationAdaptor.sendSmsOtpMessage(mobileNumber, otp);
+            smsSent = true;
+        } catch (Exception e) {
+            log.error("Failed to send OTP via SMS to: " + mobileNumber, e);
+        }
+        if (email != null && !email.isBlank()) {
+            try {
+                notificationAdaptor.callEmailServiceToSendOtp(email, otp);
+                emailSent = true;
+            } catch (Exception e) {
+                log.error("Failed to send OTP via Email to: " + email, e);
+            }
+        }
+        if (!smsSent && !emailSent) {
+            return new GenericResponse(FAILED, "503",
+                    "OTP delivery failed via SMS and Email. Please try again or contact support.", null);
+        }
+        String channel = smsSent && emailSent ? "SMS and Email" : smsSent ? "SMS" : "Email";
+        return new GenericResponse(SUCCESS, "200", "OTP sent successfully via " + channel + ".", null);
     }
 
     @Override
@@ -203,14 +215,17 @@ public class IdentityServiceImpl implements IdentityService {
 
     @Override
     public GenericResponse resendOtp(String request) {
-        return notificationAdaptor.callSMSServiceToSendOtp(request);
+        String email = userRepository.findByMobileNumber(request).map(User::getEmail).orElse(null);
+        return sendOtpViaSmsAndEmail(request, email);
     }
 
     @Override
     public GenericResponse forgotPassword(String phoneNumber) {
         User user = dataValidator.checkUserExistWithPhoneNumber(phoneNumber).orElseThrow(() -> new ResourceNotFoundException("user not found with phone Number"));
-        GenericResponse genericResponse = notificationAdaptor.callSMSServiceToSendOtp(user.getMobileNumber());
-        genericResponse.setMessage("Otp sent successfully for reset password");
+        GenericResponse genericResponse = sendOtpViaSmsAndEmail(user.getMobileNumber(), user.getEmail());
+        if (SUCCESS.equals(genericResponse.getStatus())) {
+            genericResponse.setMessage("OTP sent successfully for password reset.");
+        }
         return genericResponse;
     }
 

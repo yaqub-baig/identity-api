@@ -9,6 +9,7 @@ import com.autoadda.apis.identity.entity.RefreshToken;
 import com.autoadda.apis.identity.entity.Role;
 import com.autoadda.apis.identity.entity.User;
 import com.autoadda.apis.identity.exception.MemberAlreadyPresentException;
+import com.autoadda.apis.identity.exception.OtpNotSentException;
 import com.autoadda.apis.identity.exception.ResourceNotFoundException;
 import com.autoadda.apis.identity.request.ResetPasswordRequest;
 import com.autoadda.apis.identity.request.SignInRequest;
@@ -117,7 +118,9 @@ class PlatformAuthenticationServiceImplTest {
         Role customerRole = new Role ( );
         customerRole.setName ( ERole.CUSTOMER );
 
-        GenericResponse expectedResponse = new GenericResponse ( "success", "200", "Otp sent successfully", null );
+        String otp = "123456";
+        GenericResponse smsResponse = new GenericResponse ( "success", "200", "OTP sent successfully", null );
+        GenericResponse emailResponse = new GenericResponse ( "success", "200", "OTP sent successfully", null );
 
         // Mock behaviors
         when ( platformDataValidator.checkUserAlreadyExists ( "+9710000000", request.getEmailId ( ) ) ).thenReturn ( false );
@@ -125,7 +128,9 @@ class PlatformAuthenticationServiceImplTest {
         when ( passwordEncoder.encode ( "testPassword" ) ).thenReturn ( "encodedPassword" );
         when ( roleRepository.findByName ( ERole.CUSTOMER ) ).thenReturn ( Optional.of ( customerRole ) );
         when ( userRepository.save ( any ( User.class ) ) ).thenReturn ( savedUser );
-        when ( platformNotificationAdaptor.callSMSServiceToSendOtp ( "+9710000000" ) ).thenReturn ( expectedResponse );
+        when ( platformNotificationAdaptor.generateAndStoreOtp ( "+9710000000", "test@gmail.com" ) ).thenReturn ( otp );
+        when ( platformNotificationAdaptor.sendSmsOtpMessage ( "+9710000000", otp ) ).thenReturn ( smsResponse );
+        when ( platformNotificationAdaptor.callEmailServiceToSendOtp ( "test@gmail.com", otp ) ).thenReturn ( emailResponse );
 
         // Act
         GenericResponse actualResponse = platformAuthenticationService.registerUserDetails ( request );
@@ -134,7 +139,7 @@ class PlatformAuthenticationServiceImplTest {
         assertThat ( actualResponse ).isNotNull ( );
         assertThat ( actualResponse.getStatus ( ) ).isEqualTo ( "success" );
         assertThat ( actualResponse.getCode ( ) ).isEqualTo ( "200" );
-        assertThat ( actualResponse.getMessage ( ) ).isEqualTo ( "Otp sent successfully" );
+        assertThat ( actualResponse.getMessage ( ) ).isEqualTo ( "OTP sent successfully via SMS and Email." );
 
         // Verify interactions
         verify ( platformDataValidator ).checkUserAlreadyExists ( "+9710000000", "test@gmail.com" );
@@ -146,7 +151,9 @@ class PlatformAuthenticationServiceImplTest {
                     user.getPassword ( ).equals ( "encodedPassword" ) &&
                     user.getRoles ( ).contains ( customerRole );
         } ) );
-        verify ( platformNotificationAdaptor ).callSMSServiceToSendOtp ( "+9710000000" );
+        verify ( platformNotificationAdaptor ).generateAndStoreOtp ( "+9710000000", "test@gmail.com" );
+        verify ( platformNotificationAdaptor ).sendSmsOtpMessage ( "+9710000000", otp );
+        verify ( platformNotificationAdaptor ).callEmailServiceToSendOtp ( "test@gmail.com", otp );
     }
 
     @Order(2)
@@ -158,12 +165,16 @@ class PlatformAuthenticationServiceImplTest {
         request.setEmailId ( "test@gmail.com" );
         request.setPassword ( "testPassword" );
 
-        GenericResponse expectedResponse = new GenericResponse ( "success", "200", "Otp sent successfully", null );
+        String otp = "123456";
+        GenericResponse smsResponse = new GenericResponse ( "success", "200", "OTP sent successfully", null );
+        GenericResponse emailResponse = new GenericResponse ( "success", "200", "OTP sent successfully", null );
 
         // Mock behaviors
         when ( platformDataValidator.checkUserAlreadyExists ( "+9710000000", request.getEmailId ( ) ) ).thenReturn ( true );
         when ( platformDataValidator.checkUserIsVerified ( "+9710000000" ) ).thenReturn ( false );
-        when ( platformNotificationAdaptor.callSMSServiceToSendOtp ( "+9710000000" ) ).thenReturn ( expectedResponse );
+        when ( platformNotificationAdaptor.generateAndStoreOtp ( "+9710000000", "test@gmail.com" ) ).thenReturn ( otp );
+        when ( platformNotificationAdaptor.sendSmsOtpMessage ( "+9710000000", otp ) ).thenReturn ( smsResponse );
+        when ( platformNotificationAdaptor.callEmailServiceToSendOtp ( "test@gmail.com", otp ) ).thenReturn ( emailResponse );
 
         // Act
         GenericResponse actualResponse = platformAuthenticationService.registerUserDetails ( request );
@@ -172,12 +183,14 @@ class PlatformAuthenticationServiceImplTest {
         assertThat ( actualResponse ).isNotNull ( );
         assertThat ( actualResponse.getStatus ( ) ).isEqualTo ( "success" );
         assertThat ( actualResponse.getCode ( ) ).isEqualTo ( "200" );
-        assertThat ( actualResponse.getMessage ( ) ).isEqualTo ( "Otp sent successfully" );
+        assertThat ( actualResponse.getMessage ( ) ).isEqualTo ( "OTP sent successfully via SMS and Email." );
 
         // Verify interactions
         verify ( platformDataValidator ).checkUserAlreadyExists ( "+9710000000", "test@gmail.com" );
         verify ( platformDataValidator ).checkUserIsVerified ( "+9710000000" );
-        verify ( platformNotificationAdaptor ).callSMSServiceToSendOtp ( "+9710000000" );
+        verify ( platformNotificationAdaptor ).generateAndStoreOtp ( "+9710000000", "test@gmail.com" );
+        verify ( platformNotificationAdaptor ).sendSmsOtpMessage ( "+9710000000", otp );
+        verify ( platformNotificationAdaptor ).callEmailServiceToSendOtp ( "test@gmail.com", otp );
 
         // Verify that user creation methods are NOT called
         verify ( platformObjectTransformer, never ( ) ).tranformUserRequestToUser ( any ( ) );
@@ -213,7 +226,7 @@ class PlatformAuthenticationServiceImplTest {
         verify ( passwordEncoder, never ( ) ).encode ( any ( ) );
         verify ( roleRepository, never ( ) ).findByName ( any ( ) );
         verify ( userRepository, never ( ) ).save ( any ( ) );
-        verify ( platformNotificationAdaptor, never ( ) ).callSMSServiceToSendOtp ( any ( ) );
+        verify ( platformNotificationAdaptor, never ( ) ).generateAndStoreOtp ( any ( ), any ( ) );
     }
 
     @Order(4)
@@ -249,7 +262,7 @@ class PlatformAuthenticationServiceImplTest {
 
         // Verify that user save and OTP methods are NOT called
         verify ( userRepository, never ( ) ).save ( any ( ) );
-        verify ( platformNotificationAdaptor, never ( ) ).callSMSServiceToSendOtp ( any ( ) );
+        verify ( platformNotificationAdaptor, never ( ) ).generateAndStoreOtp ( any ( ), any ( ) );
     }
 
 
@@ -382,10 +395,13 @@ class PlatformAuthenticationServiceImplTest {
     void resendOtp_success() {
         // Arrange
         String mobileNumber = "+9710000000";
-        GenericResponse expectedResponse = new GenericResponse("success", "200", "Otp sent successfully", null);
+        String otp = "123456";
+        GenericResponse smsResponse = new GenericResponse("success", "200", "OTP sent successfully", null);
 
         // Mock behaviors
-        when(platformNotificationAdaptor.callSMSServiceToSendOtp(mobileNumber)).thenReturn(expectedResponse);
+        when(userRepository.findByMobileNumber(mobileNumber)).thenReturn(Optional.empty());
+        when(platformNotificationAdaptor.generateAndStoreOtp(mobileNumber, null)).thenReturn(otp);
+        when(platformNotificationAdaptor.sendSmsOtpMessage(mobileNumber, otp)).thenReturn(smsResponse);
 
         // Act
         GenericResponse actualResponse = platformAuthenticationService.resendOtp(mobileNumber);
@@ -394,10 +410,12 @@ class PlatformAuthenticationServiceImplTest {
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse.getStatus()).isEqualTo("success");
         assertThat(actualResponse.getCode()).isEqualTo("200");
-        assertThat(actualResponse.getMessage()).isEqualTo("Otp sent successfully");
+        assertThat(actualResponse.getMessage()).isEqualTo("OTP sent successfully via SMS.");
 
         // Verify interactions
-        verify(platformNotificationAdaptor).callSMSServiceToSendOtp(mobileNumber);
+        verify(platformNotificationAdaptor).generateAndStoreOtp(mobileNumber, null);
+        verify(platformNotificationAdaptor).sendSmsOtpMessage(mobileNumber, otp);
+        verify(platformNotificationAdaptor, never()).callEmailServiceToSendOtp(any(), any());
     }
 
     @Order(10)
@@ -405,10 +423,13 @@ class PlatformAuthenticationServiceImplTest {
     void resendOtp_failure() {
         // Arrange
         String mobileNumber = "+9710000000";
-        GenericResponse expectedResponse = new GenericResponse("failed", "500", "Failed to send OTP", null);
+        String otp = "123456";
 
         // Mock behaviors
-        when(platformNotificationAdaptor.callSMSServiceToSendOtp(mobileNumber)).thenReturn(expectedResponse);
+        when(userRepository.findByMobileNumber(mobileNumber)).thenReturn(Optional.empty());
+        when(platformNotificationAdaptor.generateAndStoreOtp(mobileNumber, null)).thenReturn(otp);
+        when(platformNotificationAdaptor.sendSmsOtpMessage(mobileNumber, otp))
+                .thenThrow(new OtpNotSentException("SMS service temporarily unavailable."));
 
         // Act
         GenericResponse actualResponse = platformAuthenticationService.resendOtp(mobileNumber);
@@ -416,11 +437,11 @@ class PlatformAuthenticationServiceImplTest {
         // Assert
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse.getStatus()).isEqualTo("failed");
-        assertThat(actualResponse.getCode()).isEqualTo("500");
-        assertThat(actualResponse.getMessage()).isEqualTo("Failed to send OTP");
+        assertThat(actualResponse.getCode()).isEqualTo("503");
+        assertThat(actualResponse.getMessage()).isEqualTo("OTP delivery failed via SMS and Email. Please try again or contact support.");
 
         // Verify interactions
-        verify(platformNotificationAdaptor).callSMSServiceToSendOtp(mobileNumber);
+        verify(platformNotificationAdaptor).sendSmsOtpMessage(mobileNumber, otp);
     }
 
     @Order(11)
@@ -428,10 +449,13 @@ class PlatformAuthenticationServiceImplTest {
     void resendOtp_withNullMobileNumber() {
         // Arrange
         String mobileNumber = null;
-        GenericResponse expectedResponse = new GenericResponse("failed", "400", "Invalid mobile number", null);
+        String otp = "123456";
 
         // Mock behaviors
-        when(platformNotificationAdaptor.callSMSServiceToSendOtp(mobileNumber)).thenReturn(expectedResponse);
+        when(userRepository.findByMobileNumber(mobileNumber)).thenReturn(Optional.empty());
+        when(platformNotificationAdaptor.generateAndStoreOtp(mobileNumber, null)).thenReturn(otp);
+        when(platformNotificationAdaptor.sendSmsOtpMessage(mobileNumber, otp))
+                .thenThrow(new OtpNotSentException("Invalid mobile number"));
 
         // Act
         GenericResponse actualResponse = platformAuthenticationService.resendOtp(mobileNumber);
@@ -439,11 +463,10 @@ class PlatformAuthenticationServiceImplTest {
         // Assert
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse.getStatus()).isEqualTo("failed");
-        assertThat(actualResponse.getCode()).isEqualTo("400");
-        assertThat(actualResponse.getMessage()).isEqualTo("Invalid mobile number");
+        assertThat(actualResponse.getCode()).isEqualTo("503");
 
         // Verify interactions
-        verify(platformNotificationAdaptor).callSMSServiceToSendOtp(mobileNumber);
+        verify(platformNotificationAdaptor).sendSmsOtpMessage(mobileNumber, otp);
     }
 
     @Order(12)
@@ -451,10 +474,13 @@ class PlatformAuthenticationServiceImplTest {
     void resendOtp_withEmptyMobileNumber() {
         // Arrange
         String mobileNumber = "";
-        GenericResponse expectedResponse = new GenericResponse("failed", "400", "Invalid mobile number", null);
+        String otp = "123456";
 
         // Mock behaviors
-        when(platformNotificationAdaptor.callSMSServiceToSendOtp(mobileNumber)).thenReturn(expectedResponse);
+        when(userRepository.findByMobileNumber(mobileNumber)).thenReturn(Optional.empty());
+        when(platformNotificationAdaptor.generateAndStoreOtp(mobileNumber, null)).thenReturn(otp);
+        when(platformNotificationAdaptor.sendSmsOtpMessage(mobileNumber, otp))
+                .thenThrow(new OtpNotSentException("Invalid mobile number"));
 
         // Act
         GenericResponse actualResponse = platformAuthenticationService.resendOtp(mobileNumber);
@@ -462,11 +488,10 @@ class PlatformAuthenticationServiceImplTest {
         // Assert
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse.getStatus()).isEqualTo("failed");
-        assertThat(actualResponse.getCode()).isEqualTo("400");
-        assertThat(actualResponse.getMessage()).isEqualTo("Invalid mobile number");
+        assertThat(actualResponse.getCode()).isEqualTo("503");
 
         // Verify interactions
-        verify(platformNotificationAdaptor).callSMSServiceToSendOtp(mobileNumber);
+        verify(platformNotificationAdaptor).sendSmsOtpMessage(mobileNumber, otp);
     }
 
     @Order(13)
@@ -474,10 +499,13 @@ class PlatformAuthenticationServiceImplTest {
     void resendOtp_withDifferentMobileNumberFormats() {
         // Arrange
         String mobileNumber = "971501234567";
-        GenericResponse expectedResponse = new GenericResponse("success", "200", "Otp sent successfully", null);
+        String otp = "123456";
+        GenericResponse smsResponse = new GenericResponse("success", "200", "OTP sent successfully", null);
 
         // Mock behaviors
-        when(platformNotificationAdaptor.callSMSServiceToSendOtp(mobileNumber)).thenReturn(expectedResponse);
+        when(userRepository.findByMobileNumber(mobileNumber)).thenReturn(Optional.empty());
+        when(platformNotificationAdaptor.generateAndStoreOtp(mobileNumber, null)).thenReturn(otp);
+        when(platformNotificationAdaptor.sendSmsOtpMessage(mobileNumber, otp)).thenReturn(smsResponse);
 
         // Act
         GenericResponse actualResponse = platformAuthenticationService.resendOtp(mobileNumber);
@@ -486,10 +514,10 @@ class PlatformAuthenticationServiceImplTest {
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse.getStatus()).isEqualTo("success");
         assertThat(actualResponse.getCode()).isEqualTo("200");
-        assertThat(actualResponse.getMessage()).isEqualTo("Otp sent successfully");
+        assertThat(actualResponse.getMessage()).isEqualTo("OTP sent successfully via SMS.");
 
         // Verify interactions
-        verify(platformNotificationAdaptor).callSMSServiceToSendOtp(mobileNumber);
+        verify(platformNotificationAdaptor).sendSmsOtpMessage(mobileNumber, otp);
     }
 
     @Order(14)
@@ -780,16 +808,18 @@ class PlatformAuthenticationServiceImplTest {
     void forgotPassword_success() {
         // Arrange
         String phoneNumber = "+9710000000";
+        String otp = "123456";
 
         User mockUser = new User();
         mockUser.setId(1);
         mockUser.setMobileNumber(phoneNumber);
 
-        GenericResponse expectedResponse = new GenericResponse("success", "200", "Otp sent successfully", null);
+        GenericResponse smsResponse = new GenericResponse("success", "200", "OTP sent successfully", null);
 
         // Mock behaviors
         when(platformDataValidator.checkUserExistWithPhoneNumber(phoneNumber)).thenReturn(Optional.of(mockUser));
-        when(platformNotificationAdaptor.callSMSServiceToSendOtp(phoneNumber)).thenReturn(expectedResponse);
+        when(platformNotificationAdaptor.generateAndStoreOtp(phoneNumber, null)).thenReturn(otp);
+        when(platformNotificationAdaptor.sendSmsOtpMessage(phoneNumber, otp)).thenReturn(smsResponse);
 
         // Act
         GenericResponse actualResponse = platformAuthenticationService.forgotPassword(phoneNumber);
@@ -798,11 +828,11 @@ class PlatformAuthenticationServiceImplTest {
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse.getStatus()).isEqualTo("success");
         assertThat(actualResponse.getCode()).isEqualTo("200");
-        assertThat(actualResponse.getMessage()).isEqualTo("Otp sent successfully for reset password");
+        assertThat(actualResponse.getMessage()).isEqualTo("OTP sent successfully for password reset.");
 
         // Verify interactions
         verify(platformDataValidator).checkUserExistWithPhoneNumber(phoneNumber);
-        verify(platformNotificationAdaptor).callSMSServiceToSendOtp(phoneNumber);
+        verify(platformNotificationAdaptor).sendSmsOtpMessage(phoneNumber, otp);
     }
 
     @Order(24)
@@ -821,7 +851,7 @@ class PlatformAuthenticationServiceImplTest {
 
         // Verify interactions
         verify(platformDataValidator).checkUserExistWithPhoneNumber(phoneNumber);
-        verify(platformNotificationAdaptor, never()).callSMSServiceToSendOtp(any());
+        verify(platformNotificationAdaptor, never()).generateAndStoreOtp(any(), any());
     }
 
     @Order(25)
@@ -829,16 +859,17 @@ class PlatformAuthenticationServiceImplTest {
     void forgotPassword_smsServiceFailure() {
         // Arrange
         String phoneNumber = "+9710000000";
+        String otp = "123456";
 
         User mockUser = new User();
         mockUser.setId(1);
         mockUser.setMobileNumber(phoneNumber);
 
-        GenericResponse expectedResponse = new GenericResponse("failed", "500", "Failed to send OTP", null);
-
         // Mock behaviors
         when(platformDataValidator.checkUserExistWithPhoneNumber(phoneNumber)).thenReturn(Optional.of(mockUser));
-        when(platformNotificationAdaptor.callSMSServiceToSendOtp(phoneNumber)).thenReturn(expectedResponse);
+        when(platformNotificationAdaptor.generateAndStoreOtp(phoneNumber, null)).thenReturn(otp);
+        when(platformNotificationAdaptor.sendSmsOtpMessage(phoneNumber, otp))
+                .thenThrow(new OtpNotSentException("SMS service temporarily unavailable."));
 
         // Act
         GenericResponse actualResponse = platformAuthenticationService.forgotPassword(phoneNumber);
@@ -846,12 +877,12 @@ class PlatformAuthenticationServiceImplTest {
         // Assert
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse.getStatus()).isEqualTo("failed");
-        assertThat(actualResponse.getCode()).isEqualTo("500");
-        assertThat(actualResponse.getMessage()).isEqualTo("Otp sent successfully for reset password");
+        assertThat(actualResponse.getCode()).isEqualTo("503");
+        assertThat(actualResponse.getMessage()).isEqualTo("OTP delivery failed via SMS and Email. Please try again or contact support.");
 
         // Verify interactions
         verify(platformDataValidator).checkUserExistWithPhoneNumber(phoneNumber);
-        verify(platformNotificationAdaptor).callSMSServiceToSendOtp(phoneNumber);
+        verify(platformNotificationAdaptor).sendSmsOtpMessage(phoneNumber, otp);
     }
 
 // ================ VERIFY RESET PASSWORD OTP TEST CASES ================

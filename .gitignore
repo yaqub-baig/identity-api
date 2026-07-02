@@ -2,3 +2,5 @@
 /.project
 /.settings
 /.idea
+/.claude/
+hs_err_pid*.log

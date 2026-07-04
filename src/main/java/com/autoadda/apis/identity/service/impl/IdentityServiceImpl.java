@@ -180,11 +180,19 @@ public class IdentityServiceImpl implements IdentityService {
         User user = null;
         if (loginRequest.getMobileNumber() != null && !loginRequest.getMobileNumber().isEmpty()) {
             loginRequest.setMobileNumber("+971" + loginRequest.getMobileNumber());
-            user = userRepository.findByMobileNumberAndIsVerified(loginRequest.getMobileNumber()).orElseThrow(() ->
-                    new UsernameNotFoundException(" User not found with phone number: " + loginRequest.getMobileNumber()));
+            user = userRepository.findByMobileNumberAndIsVerified(loginRequest.getMobileNumber()).orElseGet(() -> {
+                if (userRepository.findByMobileNumber(loginRequest.getMobileNumber()).isPresent()) {
+                    throw new BadRequestException("Account not verified. Please verify the OTP sent to your phone number before signing in.");
+                }
+                throw new UsernameNotFoundException(" User not found with phone number: " + loginRequest.getMobileNumber());
+            });
         } else if (loginRequest.getEmail() != null && !loginRequest.getEmail().isEmpty()) {
-            user = userRepository.findByEmailAndIsVerified(loginRequest.getEmail()).orElseThrow(() ->
-                    new UsernameNotFoundException("user not found with email: " + loginRequest.getEmail()));
+            user = userRepository.findByEmailAndIsVerified(loginRequest.getEmail()).orElseGet(() -> {
+                if (userRepository.findByEmail(loginRequest.getEmail()).isPresent()) {
+                    throw new BadRequestException("Account not verified. Please verify the OTP sent to your phone number before signing in.");
+                }
+                throw new UsernameNotFoundException("user not found with email: " + loginRequest.getEmail());
+            });
         }
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(user.getMobileNumber(), loginRequest.getPassword())

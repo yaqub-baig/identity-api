@@ -22,10 +22,11 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Value("${jwt.refresh-token.expiration}")
     private Long refreshTokenDurationMs;
 
+    @Transactional
     @Override
     public String generateRefreshToken(User user) {
 
-        refreshTokenRepository.findByUser(user).ifPresent(refreshTokenRepository::delete);
+        refreshTokenRepository.deleteByUserId(user.getId());
 
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setUser(user);

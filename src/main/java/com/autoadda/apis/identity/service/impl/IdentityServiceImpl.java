@@ -175,8 +175,7 @@ public class IdentityServiceImpl implements IdentityService {
 
     @Override
     public GenericResponse signIn(SignInRequest loginRequest) {
-        log.info("request -1> " + loginRequest.getMobileNumber() + "   " + loginRequest.getPassword());
-        log.info("request -2> " + loginRequest.getEmail() + "   " + loginRequest.getPassword());
+        log.info("signIn request mobileNumber={} email={}", loginRequest.getMobileNumber(), loginRequest.getEmail());
         User user = null;
         if (loginRequest.getMobileNumber() != null && !loginRequest.getMobileNumber().isEmpty()) {
             loginRequest.setMobileNumber("+971" + loginRequest.getMobileNumber());

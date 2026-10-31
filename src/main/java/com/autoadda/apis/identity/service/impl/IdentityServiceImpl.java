@@ -36,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -73,7 +74,7 @@ public class IdentityServiceImpl implements IdentityService {
         String mobileNumber = "+971" + request.getMobileNumber();
         log.info("1 " + mobileNumber);
         request.setMobileNumber(mobileNumber);
-        boolean userExists = dataValidator.checkUserAlreadyExists(mobileNumber, request.getEmailId());
+        boolean userExists = dataValidator.checkUserExistsWithPhoneNumber(mobileNumber);
         log.info("2 " + userExists);
         if (userExists) {
             if (!dataValidator.checkUserIsVerified(request.getMobileNumber())) {
@@ -81,6 +82,10 @@ public class IdentityServiceImpl implements IdentityService {
                 return sendOtpViaSmsAndEmail(request.getMobileNumber(), request.getEmailId());
             }
             throw new MemberAlreadyPresentException("user already exists");
+        }
+        // The email belongs to an account with a different mobile number
+        if (dataValidator.checkUserExistsWithEmail(request.getEmailId())) {
+            throw new MemberAlreadyPresentException("Email already registered with another account");
         }
         User user = userMapper.tranformUserRequestToUser(request);
         log.info("4 user not exist and new user is create " + user.getMobileNumber());
@@ -140,7 +145,12 @@ public class IdentityServiceImpl implements IdentityService {
         boolean isVerified = notificationAdaptor.verifyOtp(request);
         log.info("7 otp for verification against this number is  " + isVerified);
         if (isVerified) {
-            userRepository.findByMobileNumber(request.getMobileNumber())
+            Optional<User> existingUser = userRepository.findByMobileNumber(request.getMobileNumber());
+            if (existingUser.isEmpty()) {
+                log.warn("otp verified but no user found with mobile number " + request.getMobileNumber());
+                return GenericResponse.builder().status(FAILED).code("404").message("user not found with mobile number. Please register first.").build();
+            }
+            existingUser
                     .ifPresent(user -> {
                         user.setIsVerified(true);
                         User savedUser = userRepository.save(user);

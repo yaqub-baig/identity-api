@@ -129,7 +129,7 @@ class PlatformAuthenticationServiceImplTest {
 
         // Mock behaviors
         when ( recaptchaAdaptor.verifyToken ( any ( ) ) ).thenReturn ( true );
-        when ( platformDataValidator.checkUserAlreadyExists ( "+9710000000", request.getEmailId ( ) ) ).thenReturn ( false );
+        when ( platformDataValidator.checkUserExistsWithPhoneNumber ( "+9710000000" ) ).thenReturn ( false );
         when ( platformObjectTransformer.tranformUserRequestToUser ( request ) ).thenReturn ( mockUser );
         when ( passwordEncoder.encode ( "testPassword" ) ).thenReturn ( "encodedPassword" );
         when ( roleRepository.findByName ( ERole.CUSTOMER ) ).thenReturn ( Optional.of ( customerRole ) );
@@ -148,7 +148,7 @@ class PlatformAuthenticationServiceImplTest {
         assertThat ( actualResponse.getMessage ( ) ).isEqualTo ( "OTP sent successfully via SMS and Email." );
 
         // Verify interactions
-        verify ( platformDataValidator ).checkUserAlreadyExists ( "+9710000000", "test@gmail.com" );
+        verify ( platformDataValidator ).checkUserExistsWithPhoneNumber ( "+9710000000" );
         verify ( platformObjectTransformer ).tranformUserRequestToUser ( request );
         verify ( passwordEncoder ).encode ( "testPassword" );
         verify ( roleRepository ).findByName ( ERole.CUSTOMER );
@@ -177,7 +177,7 @@ class PlatformAuthenticationServiceImplTest {
 
         // Mock behaviors
         when ( recaptchaAdaptor.verifyToken ( any ( ) ) ).thenReturn ( true );
-        when ( platformDataValidator.checkUserAlreadyExists ( "+9710000000", request.getEmailId ( ) ) ).thenReturn ( true );
+        when ( platformDataValidator.checkUserExistsWithPhoneNumber ( "+9710000000" ) ).thenReturn ( true );
         when ( platformDataValidator.checkUserIsVerified ( "+9710000000" ) ).thenReturn ( false );
         when ( platformNotificationAdaptor.generateAndStoreOtp ( "+9710000000", "test@gmail.com" ) ).thenReturn ( otp );
         when ( platformNotificationAdaptor.sendSmsOtpMessage ( "+9710000000", otp ) ).thenReturn ( smsResponse );
@@ -193,7 +193,7 @@ class PlatformAuthenticationServiceImplTest {
         assertThat ( actualResponse.getMessage ( ) ).isEqualTo ( "OTP sent successfully via SMS and Email." );
 
         // Verify interactions
-        verify ( platformDataValidator ).checkUserAlreadyExists ( "+9710000000", "test@gmail.com" );
+        verify ( platformDataValidator ).checkUserExistsWithPhoneNumber ( "+9710000000" );
         verify ( platformDataValidator ).checkUserIsVerified ( "+9710000000" );
         verify ( platformNotificationAdaptor ).generateAndStoreOtp ( "+9710000000", "test@gmail.com" );
         verify ( platformNotificationAdaptor ).sendSmsOtpMessage ( "+9710000000", otp );
@@ -217,7 +217,7 @@ class PlatformAuthenticationServiceImplTest {
 
         // Mock behaviors
         when ( recaptchaAdaptor.verifyToken ( any ( ) ) ).thenReturn ( true );
-        when ( platformDataValidator.checkUserAlreadyExists ( "+9710000000", request.getEmailId ( ) ) ).thenReturn ( true );
+        when ( platformDataValidator.checkUserExistsWithPhoneNumber ( "+9710000000" ) ).thenReturn ( true );
         when ( platformDataValidator.checkUserIsVerified ( "+9710000000" ) ).thenReturn ( true );
 
         // Act & Assert
@@ -226,13 +226,37 @@ class PlatformAuthenticationServiceImplTest {
                 .hasMessage ( "user already exists" );
 
         // Verify interactions
-        verify ( platformDataValidator ).checkUserAlreadyExists ( "+9710000000", "test@gmail.com" );
+        verify ( platformDataValidator ).checkUserExistsWithPhoneNumber ( "+9710000000" );
         verify ( platformDataValidator ).checkUserIsVerified ( "+9710000000" );
 
         // Verify that user creation and OTP methods are NOT called
         verify ( platformObjectTransformer, never ( ) ).tranformUserRequestToUser ( any ( ) );
         verify ( passwordEncoder, never ( ) ).encode ( any ( ) );
         verify ( roleRepository, never ( ) ).findByName ( any ( ) );
+        verify ( userRepository, never ( ) ).save ( any ( ) );
+        verify ( platformNotificationAdaptor, never ( ) ).generateAndStoreOtp ( any ( ), any ( ) );
+    }
+
+    @Test
+    void registerUserDetails_emailUsedByAnotherNumber_shouldThrowException() {
+        // Arrange
+        UserRegisterRequest request = new UserRegisterRequest ( );
+        request.setMobileNumber ( "0000000" );
+        request.setEmailId ( "test@gmail.com" );
+        request.setPassword ( "testPassword" );
+
+        // Mock behaviors
+        when ( recaptchaAdaptor.verifyToken ( any ( ) ) ).thenReturn ( true );
+        when ( platformDataValidator.checkUserExistsWithPhoneNumber ( "+9710000000" ) ).thenReturn ( false );
+        when ( platformDataValidator.checkUserExistsWithEmail ( "test@gmail.com" ) ).thenReturn ( true );
+
+        // Act & Assert
+        assertThatThrownBy ( () -> platformAuthenticationService.registerUserDetails ( request ) )
+                .isInstanceOf ( MemberAlreadyPresentException.class )
+                .hasMessage ( "Email already registered with another account" );
+
+        // Verify that no OTP is sent and no user is created
+        verify ( platformDataValidator, never ( ) ).checkUserIsVerified ( any ( ) );
         verify ( userRepository, never ( ) ).save ( any ( ) );
         verify ( platformNotificationAdaptor, never ( ) ).generateAndStoreOtp ( any ( ), any ( ) );
     }
@@ -253,7 +277,7 @@ class PlatformAuthenticationServiceImplTest {
 
         // Mock behaviors
         when ( recaptchaAdaptor.verifyToken ( any ( ) ) ).thenReturn ( true );
-        when ( platformDataValidator.checkUserAlreadyExists ( "+9710000000", request.getEmailId ( ) ) ).thenReturn ( false );
+        when ( platformDataValidator.checkUserExistsWithPhoneNumber ( "+9710000000" ) ).thenReturn ( false );
         when ( platformObjectTransformer.tranformUserRequestToUser ( request ) ).thenReturn ( mockUser );
         when ( passwordEncoder.encode ( "testPassword" ) ).thenReturn ( "encodedPassword" );
         when ( roleRepository.findByName ( ERole.CUSTOMER ) ).thenReturn ( Optional.empty ( ) );
@@ -264,7 +288,7 @@ class PlatformAuthenticationServiceImplTest {
                 .hasMessage ( "Error: Role is not found." );
 
         // Verify interactions
-        verify ( platformDataValidator ).checkUserAlreadyExists ( "+9710000000", "test@gmail.com" );
+        verify ( platformDataValidator ).checkUserExistsWithPhoneNumber ( "+9710000000" );
         verify ( platformObjectTransformer ).tranformUserRequestToUser ( request );
         verify ( passwordEncoder ).encode ( "testPassword" );
         verify ( roleRepository ).findByName ( ERole.CUSTOMER );
@@ -292,7 +316,7 @@ class PlatformAuthenticationServiceImplTest {
                 .hasMessage ( "Captcha verification failed" );
 
         // Verify that user lookup and creation methods are NOT called
-        verify ( platformDataValidator, never ( ) ).checkUserAlreadyExists ( any ( ), any ( ) );
+        verify ( platformDataValidator, never ( ) ).checkUserExistsWithPhoneNumber ( any ( ) );
         verify ( userRepository, never ( ) ).save ( any ( ) );
     }
 
@@ -343,7 +367,7 @@ class PlatformAuthenticationServiceImplTest {
 
     @Order(6)
     @Test
-    void verifyOtp_success_userNotExists() {
+    void verifyOtp_userNotExists_shouldReturnFailedResponse() {
         // Arrange
         VerifyOtpRequest request = new VerifyOtpRequest();
         request.setMobileNumber("0000000");
@@ -358,9 +382,9 @@ class PlatformAuthenticationServiceImplTest {
 
         // Assert
         assertThat(actualResponse).isNotNull();
-        assertThat(actualResponse.getStatus()).isEqualTo("success");
-        assertThat(actualResponse.getCode()).isEqualTo("200");
-        assertThat(actualResponse.getMessage()).isEqualTo("otp verified Your auto adda id is ");
+        assertThat(actualResponse.getStatus()).isEqualTo("failed");
+        assertThat(actualResponse.getCode()).isEqualTo("404");
+        assertThat(actualResponse.getMessage()).isEqualTo("user not found with mobile number. Please register first.");
 
         // Verify interactions
         verify(platformNotificationAdaptor).verifyOtp(request);
@@ -411,7 +435,7 @@ class PlatformAuthenticationServiceImplTest {
 
         // Assert
         assertThat(actualResponse).isNotNull();
-        assertThat(actualResponse.getStatus()).isEqualTo("success");
+        assertThat(actualResponse.getStatus()).isEqualTo("failed"); // no user with this number
         assertThat(request.getMobileNumber()).isEqualTo("+9711234567"); // Verify transformation
 
         // Verify interactions

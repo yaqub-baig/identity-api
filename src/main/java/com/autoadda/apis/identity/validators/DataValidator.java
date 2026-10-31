@@ -13,8 +13,12 @@ public class DataValidator {
 
     private final UserRepository userRepository;
 
-    public boolean checkUserAlreadyExists(String mobileNumber, String email) {
-        return userRepository.existsByMobileNumber(mobileNumber) || userRepository.existsByEmail(email);
+    public boolean checkUserExistsWithPhoneNumber(String mobileNumber) {
+        return userRepository.existsByMobileNumber(mobileNumber);
+    }
+
+    public boolean checkUserExistsWithEmail(String email) {
+        return userRepository.existsByEmail(email);
     }
 
     public boolean checkUserIsVerified(String mobileNumber) {
